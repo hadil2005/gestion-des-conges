@@ -1,4 +1,5 @@
 from django.db import models 
+from django.contrib.auth.models import User 
     
 class Role(models.Model):
         ROLE_CHOICES = [
@@ -12,8 +13,22 @@ class Role(models.Model):
           return self.get_name_display()
      
 class Employe(models.Model):
+    
     nom=models.CharField(max_length=40)
     fonction=models.CharField(max_length=40)
+    user=models.OneToOneField(
+      User,
+      on_delete=models.CASCADE,
+      null=True,
+      blank=True,
+      related_name='employe',   
+    )
+    def get_role(self):
+        employe_role=self.role.first()
+        return employe_role.role.name if employe_role else None
+        
+    
+    
     def __str__(self):
         return f"{self.nom}, {self.fonction}"
     
@@ -66,7 +81,7 @@ class EmployeRole(models.Model):
     employe = models.ForeignKey(
     Employe,
     on_delete=models.CASCADE,
-    related_name='roles'  
+    related_name='role'  
     )
     
     role= models.ForeignKey(
