@@ -1,0 +1,26 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Mes demandes</title>
+</head>
+<body>
+    <h2>Mes demandes de congé</h2>
+
+    <p><a href="{% url 'nouvelle_demande' %}">Nouvelle demande</a></p>
+
+    {% if demandes %}
+        <ul>
+        {% for demande in demandes %}
+            <li>
+                {{ demande.dateDebut }} → {{ demande.dateFin }}
+                ({{ demande.Numbrejours }} jours) —
+                {{ demande.get_type_conge_display }} —
+                {{ demande.get_statue_display }}
+            </li>
+        {% endfor %}
+        </ul>
+    {% else %}
+        <p>Vous n'avez aucune demande pour le moment.</p>
+    {% endif %}
+</body>
+</html>

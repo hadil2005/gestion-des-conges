@@ -24,10 +24,9 @@ class Employe(models.Model):
       related_name='employe',   
     )
     def get_role(self):
-        employe_role=self.role.first()
-        return employe_role.role.name if employe_role else None
-        
-    
+        employe_role=self.role.first() # m3ntha jib the queryset mashi f container, gnr directly the row tae the infos tae employe_role
+        return employe_role.role.name if employe_role else None # ou hadil treturni name dyalou ou ida ma yexistich trj3 none
+    # hadi a function li jib role mel employee role
     
     def __str__(self):
         return f"{self.nom}, {self.fonction}"
@@ -41,7 +40,8 @@ class Direction(models.Model):
         blank=True,
         related_name='directeur')
       def __str__(self):
-         return f"Direction - {self.directeur}"
+         return f"{self.nom_de_direction} - {self.directeur.nom}"
+
          
 class Depratement(models.Model):
     nom_de_departement= models.CharField(max_length=30)
@@ -57,8 +57,8 @@ class Depratement(models.Model):
         blank=True,
         related_name='chef_de_departemenet')
     def __str__(self):
-        return f"Depratement - {self.Chef_de_departement}"
-    
+        return f"{self.nom_de_departement} - {self.Chef_de_departement.nom}"
+     
 
 class Groupe(models.Model):
     nom_de_groupe = models.CharField(max_length=30)
@@ -74,8 +74,7 @@ class Groupe(models.Model):
         blank=True,
         related_name='chef_de_groupe')
     def __str__(self):
-        return f"Groupe - {self.Chef_de_groupe}"
-    
+        return f"{self.nom_de_groupe} - {self.Chef_de_groupe.nom}"
         
 class EmployeRole(models.Model):
     employe = models.ForeignKey(

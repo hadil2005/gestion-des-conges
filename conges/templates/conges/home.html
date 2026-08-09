@@ -4,9 +4,22 @@
     <title>Accueil</title>
 </head>
 <body>
+
     <form method="post" action="{% url 'logout' %}">
         {% csrf_token %}
         <button type="submit">Se déconnecter</button>
     </form>
+    
+    {% if messages %}
+    <ul>
+    {% for message in messages %}
+        <li>{{ message }}</li>
+    {% endfor %}
+    </ul>
+{% endif %}
+
+<p><a href="{% url 'nouvelle_demande' %}">Nouvelle demande de congé</a></p>
+<p><a href="{% url 'mes_demandes' %}">Mes demandes</a></p>
+
 </body>
 </html>

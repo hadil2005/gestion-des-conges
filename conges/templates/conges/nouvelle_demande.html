@@ -1,0 +1,26 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Nouvelle demande de congé</title>
+</head>
+<body>
+    <h2>Nouvelle demande de congé</h2>
+
+    {% if messages %}
+        <ul>
+        {% for message in messages %}
+            <li>{{ message }}</li>
+        {% endfor %}
+        </ul>
+    {% endif %}
+
+    <form method="post" enctype="multipart/form-data">
+        {% csrf_token %}
+        {{ form.as_p }}
+    <button type="submit" name="action" value="Demander">Soumettre</button>
+    <button type="submit" name="action" value="brouillon">Enregistrer comme brouillon</button>
+    
+</form>
+    </form>
+</body>
+</html>
