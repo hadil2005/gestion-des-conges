@@ -1,0 +1,23 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Demandes de remplacement</title>
+</head>
+<body>
+    <h2>Demandes où vous êtes remplaçant</h2>
+
+    {% if demandes %}
+        <ul>
+        {% for demande in demandes %}
+            <li>
+                {{ demande.name_employee }} —
+                {{ demande.dateDebut }} → {{ demande.dateFin }}
+                <a href="{% url 'accepter_remplacent' demande.id %}">Voir / Répondre</a>
+            </li>
+        {% endfor %}
+        </ul>
+    {% else %}
+        <p>Aucune demande en attente de votre réponse.</p>
+    {% endif %}
+</body>
+</html>

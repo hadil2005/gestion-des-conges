@@ -1,0 +1,21 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Traiter la demande</title>
+</head>
+<body>
+    <h2>Demande de {{ demande.name_employee }}</h2>
+
+    <p>Du {{ demande.dateDebut }} au {{ demande.dateFin }} ({{ demande.Numbrejours }} jours)</p>
+    <p>Type: {{ demande.get_type_conge_display }}</p>
+    <p>Motif: {{ demande.motif }}</p>
+    <p>Remplaçant proposé: {{ demande.name_remplacent }}</p>
+
+    <form method="post">
+        {% csrf_token %}
+        <textarea name="commentaire" placeholder="Commentaire (optionnel)"></textarea><br>
+        <button type="submit" name="action" value="valider">Valider</button>
+        <button type="submit" name="action" value="refuser">Refuser</button>
+    </form>
+</body>
+</html>

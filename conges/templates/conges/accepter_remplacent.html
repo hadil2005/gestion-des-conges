@@ -1,0 +1,18 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Répondre à la demande</title>
+</head>
+<body>
+    <h2>{{ demande.name_employee }} vous propose comme remplaçant</h2>
+
+    <p>Du {{ demande.dateDebut }} au {{ demande.dateFin }} ({{ demande.Numbrejours }} jours)</p>
+    <p>Motif: {{ demande.motif }}</p>
+
+    <form method="post">
+        {% csrf_token %}
+        <button type="submit" name="action" value="accepter">Accepter</button>
+        <button type="submit" name="action" value="refuser">Refuser</button>
+    </form>
+</body>
+</html>

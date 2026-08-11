@@ -1,10 +1,10 @@
 from django.contrib import admin
-from .models import Role, Employe, Direction, Depratement, Groupe, EmployeRole, Solde, DemandeConge, Notification, Historique
+from .models import Role, Employe, Direction, Departement, Groupe, EmployeRole, Solde, DemandeConge, Notification, Historique
 
 admin.site.register(Role)
 admin.site.register(Employe)
 admin.site.register(Direction)
-admin.site.register(Depratement)
+admin.site.register(Departement)
 admin.site.register(Groupe)
 admin.site.register(EmployeRole)
 admin.site.register(Solde)

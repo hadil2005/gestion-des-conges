@@ -7,6 +7,7 @@ class Role(models.Model):
         ('CG', 'Chef de Groupe'),
         ('CD', 'Chef de Département'),
         ('DIR', 'Directeur'),
+        ('DRH', 'DRH'),
     ] 
         name=models.CharField(max_length=20,choices=ROLE_CHOICES, unique =True)
         def __str__(self):
@@ -23,6 +24,20 @@ class Employe(models.Model):
       blank=True,
       related_name='employe',   
     )
+    
+    def meme_equipe(self, autre_employe):
+     moi = self.role.first()
+     lui = autre_employe.role.first()
+     if not moi or not lui:
+        return False
+     if moi.role.name == 'CG':
+        return moi.groupe == lui.groupe
+     if moi.role.name == 'CD':
+        return moi.dep == lui.dep
+     if moi.role.name == 'DIR':
+        return moi.direction == lui.direction
+     return False
+
     def get_role(self):
         employe_role=self.role.first() # m3ntha jib the queryset mashi f container, gnr directly the row tae the infos tae employe_role
         return employe_role.role.name if employe_role else None # ou hadil treturni name dyalou ou ida ma yexistich trj3 none
@@ -40,10 +55,12 @@ class Direction(models.Model):
         blank=True,
         related_name='directeur')
       def __str__(self):
-         return f"{self.nom_de_direction} - {self.directeur.nom}"
+        if self.directeur:
+            return f"{self.nom_de_direction} - {self.directeur.nom}"
+        return self.nom_de_direction
 
          
-class Depratement(models.Model):
+class Departement(models.Model):
     nom_de_departement= models.CharField(max_length=30)
     direction= models.ForeignKey(
      Direction,
@@ -57,25 +74,27 @@ class Depratement(models.Model):
         blank=True,
         related_name='chef_de_departemenet')
     def __str__(self):
-        return f"{self.nom_de_departement} - {self.Chef_de_departement.nom}"
+        if self.Chef_de_departement:
+            return f"{self.nom_de_departement} - {self.Chef_de_departement.nom}"
+        return self.nom_de_departement
      
 
 class Groupe(models.Model):
     nom_de_groupe = models.CharField(max_length=30)
     depratement= models.ForeignKey(
-     Depratement,
+     Departement,
      on_delete=models.CASCADE,
      related_name='groupe'
     )
-    Chef_de_groupe=  models.ForeignKey(
+    Chef_de_groupe = models.ForeignKey(
         Employe,
         on_delete=models.SET_NULL,
         null=True,
         blank=True,
         related_name='chef_de_groupe')
     def __str__(self):
-        return f"{self.nom_de_groupe} - {self.Chef_de_groupe.nom}"
-        
+     chef = self.Chef_de_groupe.nom if self.Chef_de_groupe else "Aucun chef"
+     return f"{self.nom_de_groupe} - {chef}"
 class EmployeRole(models.Model):
     employe = models.ForeignKey(
     Employe,
@@ -96,7 +115,7 @@ class EmployeRole(models.Model):
         related_name='employe_roles'
     )
     dep = models.ForeignKey(
-        Depratement,
+        Departement,
         on_delete=models.SET_NULL,
         null=True,
         blank=True,
@@ -149,10 +168,18 @@ class DemandeConge(models.Model):
         TYPE_STATUE = [
             ('VA', 'Validé'),
             ('REF', 'Refusé'),
-            ('EN ATT', 'En attente'),
+            ('EN_ATT_RMP', 'En attente remplacent'),
+            ('EN_ATT_VA', 'En attente validation'),
             ('BR', 'Brouillon'),
+            ('ANN', 'Annulé')   
         ]
         statue=models.CharField(max_length=10, choices=TYPE_STATUE)
+        NIVEAU_CHOICES = [ 
+           ('CG', 'Chef de Groupe'),
+           ('CD', 'Chef de Département'),
+           ('DIR', 'Directeur')       
+                          ]
+        niveau_validation=models.CharField(max_length=20, choices= NIVEAU_CHOICES, blank=True, null=True)
         motif = models.CharField(max_length=255, blank=True)
         TYPE_CONGE_CHOICES = [
          ('1', 'Congé xxx'),
@@ -194,3 +221,4 @@ class Historique(models.Model):
         date_creation = models.DateField(auto_now_add=True)
         def __str__(self):
          return f"Historique de {self.demande} par {self.employe}"
+     

@@ -1,0 +1,26 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Demandes à valider</title>
+</head>
+<body>
+    <h2>Demandes à valider</h2>
+
+    {% if demandes %}
+        <ul>
+        {% for demande in demandes %}
+            <li>
+                {{ demande.name_employee }} —
+                {{ demande.dateDebut }} → {{ demande.dateFin }}
+                ({{ demande.Numbrejours }} jours) —
+                {{ demande.get_type_conge_display }} —
+                {{ demande.motif }}
+                <a href="{% url 'valider_demande' demande.id %}">Voir / Traiter</a>
+            </li>
+        {% endfor %}
+        </ul>
+    {% else %}
+        <p>Aucune demande en attente.</p>
+    {% endif %}
+</body>
+</html>

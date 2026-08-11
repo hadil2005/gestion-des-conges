@@ -1,0 +1,32 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Détail de la demande</title>
+</head>
+<body>
+    <h2>Demande du {{ demande.dateDebut }} au {{ demande.dateFin }}</h2>
+
+    <p>Nombre de jours: {{ demande.Numbrejours }}</p>
+    <p>Type de congé: {{ demande.get_type_conge_display }}</p>
+    <p>Motif: {{ demande.motif }}</p>
+    <p>Remplaçant proposé: {{ demande.name_remplacent }}</p>
+    <p>Statut: {{ demande.get_statue_display }}</p>
+
+    {% if demande.statue == 'EN_ATT_VA' %}
+        <p>Niveau actuel: {{ demande.get_niveau_validation_display }}</p>
+    {% endif %}
+
+    {% if demande.statue == 'REF' %}
+        {% if demande.niveau_validation %}
+            <p>Refusé par: {{ demande.get_niveau_validation_display }}</p>
+        {% else %}
+            <p>Refusé par: le remplaçant</p>
+        {% endif %}
+        {% if demande.commentaire %}
+            <p>Commentaire: {{ demande.commentaire }}</p>
+        {% endif %}
+    {% endif %}
+
+    <p><a href="{% url 'mes_demandes' %}">Retour à mes demandes</a></p>
+</body>
+</html>

@@ -12,10 +12,21 @@
         <ul>
         {% for demande in demandes %}
             <li>
+                <a href="{% url 'detail_demande' demande.id %}">
+
                 {{ demande.dateDebut }} → {{ demande.dateFin }}
                 ({{ demande.Numbrejours }} jours) —
                 {{ demande.get_type_conge_display }} —
                 {{ demande.get_statue_display }}
+{% if demande.statue == 'EN_ATT_VA' %}
+    ({{ demande.get_niveau_validation_display }})
+{% elif demande.statue == 'REF' %}
+    {% if demande.niveau_validation %}
+        (par {{ demande.get_niveau_validation_display }})
+    {% else %}
+        (par le remplaçant)
+    {% endif %}
+{% endif %}
             </li>
         {% endfor %}
         </ul>

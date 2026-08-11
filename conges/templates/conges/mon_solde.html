@@ -1,0 +1,28 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Mon solde</title>
+</head>
+<body>
+    <h2>Mon Solde </h2>
+
+    <table>
+        <tr>
+            <th>Solde annuel</th>
+            <td>{{ solde.solde_annuel }}</td>
+        </tr>
+        <tr>
+            <th>Solde récupération</th>
+            <td>{{ solde.solde_recuperation }}</td>
+        </tr>
+        <tr>
+            <th>Solde consommé</th>
+            <td>{{ solde.solde_consomme }} </td>
+        </tr>
+        <tr>
+            <th><strong>Solde actuel</strong></th>
+            <td><strong>{{ solde.solde_actuel }} </strong></td>
+        </tr>
+    </table>
+</body>
+</html>
