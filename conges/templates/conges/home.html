@@ -22,5 +22,12 @@
 <p><a href="{% url 'mes_demandes' %}">Mes demandes</a></p>
 <a href="{% url 'mon_solde' %}">Mon Solde</a>
 
+{% if user.employe.get_role == 'DRH' %}
+    <p><a href="{% url 'gerer_employes' %}">Gérer les employés</a></p>
+{% endif %}
+
+{% if user.employe.get_role == 'DRH' or user.employe.get_role == 'DIR' %}
+    <p><a href="{% url 'rapport_absences_form' %}">Rapport absences par département</a></p>
+{% endif %}
 </body>
 </html>

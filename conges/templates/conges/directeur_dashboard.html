@@ -1,0 +1,33 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <title>Tableau de bord - Directeur</title>
+</head>
+<body>
+    <h1>Tableau de bord — {{ direction.nom_de_direction }}</h1>
+
+    <p>Effectif: {{ stats.effectif }}</p>
+    <p>Employés absents aujourd'hui: {{ stats.absents }}</p>
+    <p>Demandes en attente: {{ stats.en_attente }}</p>
+    <p>Taux d'absence: {{ stats.taux_absence }}%</p>
+
+    <h2>Demandes en attente de validation</h2>
+    {% if demandes_en_attente %}
+    <table border="1">
+        <tr><th>Employé</th><th>Type</th><th>Dates</th><th>Remplaçant</th><th>Action</th></tr>
+        {% for d in demandes_en_attente %}
+        <tr>
+            <td>{{ d.name_employee.nom }}</td>
+            <td>{{ d.get_type_conge_display }}</td>
+            <td>{{ d.dateDebut }} → {{ d.dateFin }}</td>
+            <td>{{ d.name_remplacent.nom }}</td>
+            <td><a href="{% url 'valider_demande' d.id %}">Traiter</a></td>
+        </tr>
+        {% endfor %}
+    </table>
+    {% else %}
+    <p>Aucune demande en attente.</p>
+    {% endif %}
+</body>
+</html>

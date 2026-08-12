@@ -1,0 +1,24 @@
+<!DOCTYPE html>
+<html>
+<head><title>Gérer les employés</title></head>
+<body>
+<h2>Créer un employé</h2>
+
+{% if messages %}
+<ul>{% for message in messages %}<li>{{ message }}</li>{% endfor %}</ul>
+{% endif %}
+
+<form method="post">
+    {% csrf_token %}
+    {{ form.as_p }}
+    <button type="submit">Créer</button>
+</form>
+
+<h3>Employés existants</h3>
+<ul>
+{% for e in employes %}
+    <li>{{ e.nom }} — {{ e.fonction }}</li>
+{% endfor %}
+</ul>
+</body>
+</html>

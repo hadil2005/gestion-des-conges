@@ -1,5 +1,6 @@
 from django.db import models 
 from django.contrib.auth.models import User 
+from datetime import timedelta
     
 class Role(models.Model):
         ROLE_CHOICES = [
@@ -143,8 +144,9 @@ class Solde(models.Model):
         solde_consomme = models.DecimalField(max_digits=6, decimal_places=2)
         @property
         def solde_actuel(self):
-         return self.solde_annuel + self.solde_recuperation - self.solde_consomme
-     
+            jours_missions = sum(m.jours_recuperation for m in self.employe.missions.all())
+            return self.solde_annuel + self.solde_recuperation + jours_missions - self.solde_consomme
+        
         def __str__(self): 
          return f"Solde de {self.employe}"
   
@@ -222,3 +224,31 @@ class Historique(models.Model):
         def __str__(self):
          return f"Historique de {self.demande} par {self.employe}"
      
+
+
+class Mission(models.Model):
+    employe = models.ForeignKey(Employe, on_delete=models.CASCADE, related_name='missions')
+    dateDebut = models.DateField()
+    dateFin = models.DateField()
+    motif = models.CharField(max_length=255, blank=True)
+    jours_recuperation = models.IntegerField(default=0, blank=True)
+
+    def calculer_jours_recuperation(self):
+        jours = 0
+        date = self.dateDebut
+        while date <= self.dateFin:
+            if date.weekday() in (4, 5): # counting ybda m tnin so 4= ljm3a, 5=sbt
+                jours += 1
+            date += timedelta(days=1)
+        return jours
+
+    def save(self, *args, **kwargs):
+        if not self.jours_recuperation:
+            self.jours_recuperation = self.calculer_jours_recuperation()
+        super().save(*args, **kwargs)
+
+    def __str__(self):
+        return f"Mission de {self.employe.nom} ({self.dateDebut} - {self.dateFin})"
+
+
+

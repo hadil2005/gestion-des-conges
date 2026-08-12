@@ -1,0 +1,16 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <title>Nouvelle mission</title>
+</head>
+<body>
+    <h1>Nouvelle mission</h1>
+    <form method="post">
+        {% csrf_token %}
+        {{ form.as_p }}
+        <button type="submit">Enregistrer</button>
+        <a href="{% url 'mission_liste' %}">Annuler</a>
+    </form>
+</body>
+</html>

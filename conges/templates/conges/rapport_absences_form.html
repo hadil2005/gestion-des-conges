@@ -1,0 +1,19 @@
+<!DOCTYPE html>
+<html>
+<head><title>Rapport absences par département</title></head>
+<body>
+<h2>Rapport d'absences par département</h2>
+
+<form method="get" action="{% url 'rapport_absences_departement' %}">
+    <select name="departement">
+        <option value="">Tous les départements</option>
+        {% for dep in departements %}
+        <option value="{{ dep.id }}">{{ dep.nom_de_departement }}</option>
+        {% endfor %}
+    </select>
+    <input type="date" name="date_debut">
+    <input type="date" name="date_fin">
+    <button type="submit">Générer le PDF</button>
+</form>
+</body>
+</html>

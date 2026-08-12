@@ -1,0 +1,38 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <title>Liste des missions</title>
+</head>
+<body>
+    <h1>Missions</h1>
+    <a href="{% url 'mission_creer' %}">+ Nouvelle mission</a>
+
+    {% if missions %}
+    <table border="1">
+        <thead>
+            <tr>
+                <th>Employé</th>
+                <th>Date début</th>
+                <th>Date fin</th>
+                <th>Motif</th>
+                <th>Jours récupération</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for mission in missions %}
+            <tr>
+                <td><a href="{% url 'mission_corriger' mission.id %}">{{ mission.employe.nom }} {{ mission.employe.prenom }}</a></td>
+                <td>{{ mission.dateDebut }}</td>
+                <td>{{ mission.dateFin }}</td>
+                <td>{{ mission.motif|default:"—" }}</td>
+                <td>{{ mission.jours_recuperation }}</td>
+            </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+    {% else %}
+    <p>Aucune mission enregistrée.</p>
+    {% endif %}
+</body>
+</html>
