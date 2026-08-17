@@ -1,38 +1,74 @@
-<!DOCTYPE html>
-<html lang="fr">
-<head>
-    <meta charset="UTF-8">
-    <title>Liste des missions</title>
-</head>
-<body>
-    <h1>Missions</h1>
-    <a href="{% url 'mission_creer' %}">+ Nouvelle mission</a>
-
-    {% if missions %}
-    <table border="1">
-        <thead>
-            <tr>
-                <th>Employé</th>
-                <th>Date début</th>
-                <th>Date fin</th>
-                <th>Motif</th>
-                <th>Jours récupération</th>
-            </tr>
-        </thead>
-        <tbody>
-            {% for mission in missions %}
-            <tr>
-                <td><a href="{% url 'mission_corriger' mission.id %}">{{ mission.employe.nom }} {{ mission.employe.prenom }}</a></td>
-                <td>{{ mission.dateDebut }}</td>
-                <td>{{ mission.dateFin }}</td>
-                <td>{{ mission.motif|default:"—" }}</td>
-                <td>{{ mission.jours_recuperation }}</td>
-            </tr>
+{% extends 'conges/base.html' %}
+{% block title %}Missions{% endblock %}
+ 
+{% block content %}
+<div class="flex min-h-screen">
+ 
+    {% include 'conges/_sidebar.html' %}
+ 
+    <main class="flex-1 px-8 py-8">
+ 
+        <div class="flex items-start justify-between mb-8">
+            <h1 class="text-2xl font-semibold">Missions</h1>
+            <div class="flex flex-col items-end gap-3">
+                <span class="text-sm text-neutral-400">{{ user.employe.nom }}</span>
+                <a href="{% url 'mission_creer' %}"
+                   class="inline-flex items-center gap-2 bg-primary hover:bg-primary-light text-white font-medium rounded px-5 py-2.5 text-sm transition-colors">
+                    <svg xmlns="http://www.w3.org/2000/svg" class="w-4 h-4" viewBox="0 0 20 20" fill="currentColor">
+                        <path fill-rule="evenodd" d="M10 3a1 1 0 011 1v5h5a1 1 0 110 2h-5v5a1 1 0 11-2 0v-5H4a1 1 0 110-2h5V4a1 1 0 011-1z" clip-rule="evenodd" />
+                    </svg>
+                    Nouvelle mission
+                </a>
+            </div>
+        </div>
+ 
+        {% if messages %}
+        <div class="mb-6 space-y-2">
+            {% for message in messages %}
+            <div class="bg-danger-pale border border-danger/20 text-danger text-sm rounded px-4 py-3">{{ message }}</div>
             {% endfor %}
-        </tbody>
-    </table>
-    {% else %}
-    <p>Aucune mission enregistrée.</p>
-    {% endif %}
-</body>
-</html>
+        </div>
+        {% endif %}
+ 
+        {% if missions %}
+        <div class="bg-white border border-neutral-200 rounded overflow-hidden">
+            <table class="w-full text-sm">
+              <thead>
+    <tr class="text-left text-neutral-400 border-b border-neutral-100">
+        <th class="px-6 py-3 font-medium">Employé</th>
+        <th class="px-6 py-3 font-medium">Date début</th>
+        <th class="px-6 py-3 font-medium">Date fin</th>
+        <th class="px-6 py-3 font-medium">Motif</th>
+        <th class="px-6 py-3 font-medium">Jours récupération</th>
+    </tr>
+<thead>
+<tbody class="divide-y divide-neutral-100">
+    {% for mission in missions %}
+    <tr class="hover:bg-neutral-50">
+        <td class="px-6 py-3">{{ mission.employe.nom }}</td>
+        <td class="px-6 py-3">{{ mission.dateDebut }}</td>
+        <td class="px-6 py-3">{{ mission.dateFin }}</td>
+        <td class="px-6 py-3">{{ mission.motif|default:"—" }}</td>
+        <td class="px-6 py-3">{{ mission.jours_recuperation }}</td>
+        <td class="px-6 py-3 text-right">
+            <td class="px-6 py-3 text-right space-x-3">
+    <a href="{% url 'mission_corriger' mission.id %}" class="text-primary hover:text-primary-light font-medium">Modifier</a>
+    <form method="post" action="{% url 'mission_supprimer' mission.id %}" class="inline" onsubmit="return confirm('Supprimer cette mission ?');">
+        {% csrf_token %}
+        <button type="submit" class="text-danger hover:text-danger-light font-medium">Supprimer</button>
+    </form>
+</td>
+    </tr>
+    {% endfor %}
+</tbody>
+            </table>
+        </div>
+        {% else %}
+        <div class="bg-white border border-neutral-200 rounded px-6 py-12 text-center">
+            <p class="text-neutral-400 text-sm">Aucune mission enregistrée.</p>
+        </div>
+        {% endif %}
+ 
+    </main>
+</div>
+{% endblock %}

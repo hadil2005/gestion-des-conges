@@ -144,8 +144,7 @@ class Solde(models.Model):
         solde_consomme = models.DecimalField(max_digits=6, decimal_places=2)
         @property
         def solde_actuel(self):
-            jours_missions = sum(m.jours_recuperation for m in self.employe.missions.all())
-            return self.solde_annuel + self.solde_recuperation + jours_missions - self.solde_consomme
+           return self.solde_annuel + self.solde_recuperation - self.solde_consomme
         
         def __str__(self): 
          return f"Solde de {self.employe}"
@@ -195,19 +194,28 @@ class DemandeConge(models.Model):
 
         
 class Notification(models.Model):
-    dateCreation=models.DateField(auto_now_add=True)
-    employe=models.ForeignKey(
-    Employe,
-    on_delete=models.CASCADE,
-    related_name='notification'    
-            )
-    TYPE_NOTIF_CHOICES =  [
+    dateCreation = models.DateField(auto_now_add=True)
+    employe = models.ForeignKey(
+        Employe,
+        on_delete=models.CASCADE,
+        related_name='notification'
+    )
+    demande = models.ForeignKey(
+        DemandeConge,
+        on_delete=models.CASCADE,
+        related_name='notifications',
+        null=True,
+        blank=True,
+    )
+    TYPE_NOTIF_CHOICES = [
         ('UPD', 'Update'),
         ('DMD', 'Demande')
-            ]
-    type_notif=models.CharField(max_length=10, choices=TYPE_NOTIF_CHOICES)     
+    ]
+    type_notif = models.CharField(max_length=10, choices=TYPE_NOTIF_CHOICES)
+    message = models.CharField(max_length=255)
+
     def __str__(self):
-     return f"Notification pour {self.employe} ({self.get_type_notif_display()})"   
+        return f"Notification pour {self.employe} ({self.get_type_notif_display()})"
             
 class Historique(models.Model):
         demande = models.ForeignKey(
@@ -243,12 +251,34 @@ class Mission(models.Model):
         return jours
 
     def save(self, *args, **kwargs):
+        is_new = self._state.adding
+        ancien_jours = None
+        if not is_new:
+            ancien_jours = Mission.objects.filter(pk=self.pk).values_list('jours_recuperation', flat=True).first()
+
         if not self.jours_recuperation:
             self.jours_recuperation = self.calculer_jours_recuperation()
+
         super().save(*args, **kwargs)
 
-    def __str__(self):
-        return f"Mission de {self.employe.nom} ({self.dateDebut} - {self.dateFin})"
+        solde = getattr(self.employe, 'solde', None)
+        if solde:
+            if is_new:
+                solde.solde_recuperation += self.jours_recuperation
+                solde.save()
+            elif ancien_jours is not None and ancien_jours != self.jours_recuperation:
+                delta = self.jours_recuperation - ancien_jours
+                solde.solde_recuperation += delta
+                solde.save()
 
+    def delete(self, *args, **kwargs):
+         solde = getattr(self.employe, 'solde', None)
+         if solde:
+            solde.solde_recuperation -= self.jours_recuperation
+            solde.save()
+            super().delete(*args, **kwargs)
+
+    def __str__(self):
+         return f"Mission de {self.employe.nom} ({self.dateDebut} - {self.dateFin})"
 
 

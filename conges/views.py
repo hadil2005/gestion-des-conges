@@ -2,7 +2,7 @@ from django.shortcuts import render, redirect
 from django.contrib.auth.decorators import login_required
 from .decoraters import role_required
 from .forms import DemandeCongeForm, NouvelEmployeForm,MissionCreateForm, MissionCorrectionForm
-from .models import DemandeConge, Employe, Mission
+from .models import DemandeConge, Employe, Mission, Solde, Notification, Role
 from .models import Departement, Direction
 from django.shortcuts import get_object_or_404
 from django.contrib import messages 
@@ -10,11 +10,70 @@ from django.contrib.auth.models import User
 from reportlab.pdfgen import canvas
 from django.http import HttpResponse
 from django.utils import timezone
+from django.db.models import Count
+from django.db.models.functions import TruncMonth
+from django.db.models import Q
+import json
 
+
+def get_validateur(employe, niveau):
+    """Resolve the actual chef Employe for a given employee's team at a given niveau."""
+    role_obj = employe.role.first()
+    if not role_obj:
+        return None
+
+    if niveau == 'CG':
+        return role_obj.groupe.Chef_de_groupe if role_obj.groupe else None
+    elif niveau == 'CD':
+        dep = role_obj.groupe.depratement if role_obj.groupe else role_obj.dep
+        return dep.Chef_de_departement if dep else None
+    elif niveau == 'DIR':
+        direction = None
+        if role_obj.groupe:
+            direction = role_obj.groupe.depratement.direction
+        elif role_obj.dep:
+            direction = role_obj.dep.direction
+        return direction.directeur if direction else None
+    return None
 
 @login_required
-def home(request): 
-    return render(request,'conges/home.html')
+def home(request):
+    employe = getattr(request.user, 'employe', None)
+    if not employe:
+        messages.error(request, "Aucun profil employé associé à ce compte.")
+        return redirect('login')
+
+    solde = getattr(employe, 'solde', None)
+
+    demande_courante = DemandeConge.objects.filter(
+        name_employee=employe,
+        statue__in=['EN_ATT_RMP', 'EN_ATT_VA']
+    ).order_by('-dateCreation').first()
+
+    remplacements_en_attente = DemandeConge.objects.filter(
+        name_remplacent=employe,
+        statue='EN_ATT_RMP'
+    ).order_by('-dateCreation')
+
+    notifications_recentes = Notification.objects.filter(
+        employe=employe
+    ).order_by('-dateCreation', '-id')[:5]
+
+    demandes_a_valider = []
+    role = employe.get_role()
+    if role in ['CG', 'CD', 'DIR']:
+        demandes_a_valider = [
+            d for d in DemandeConge.objects.filter(niveau_validation=role, statue='EN_ATT_VA')
+            if employe.meme_equipe(d.name_employee)
+        ]
+
+    return render(request, 'conges/home.html', {
+        'solde': solde,
+        'demande_courante': demande_courante,
+        'remplacements_en_attente': remplacements_en_attente,
+        'notifications_recentes': notifications_recentes,
+        'demandes_a_valider': demandes_a_valider,
+    })
 
 @login_required
 @role_required('CD')
@@ -58,6 +117,15 @@ def nouvelle_demande(request):
             jours = (demande.dateFin - demande.dateDebut).days
             demande.Numbrejours = jours
             demande.save()
+            demande.save()
+
+            Notification.objects.create(
+                employe=demande.name_remplacent,
+                demande=demande,
+                type_notif='DMD',
+                message=f"{employe.nom} vous a proposé comme remplaçant pour sa demande de congé.",
+            )
+
             return redirect('mes_demandes')
     else:
         form = DemandeCongeForm()
@@ -82,7 +150,6 @@ def accepter_remplacent(request, demande_id):
         action = request.POST.get('action')
         
         if action == 'accepter':
-            
             conflits = DemandeConge.objects.filter(
                 name_employee=request.user.employe,
                 statue__in=['VA', 'EN_ATT_VA', 'EN_ATT_RMP'],
@@ -92,23 +159,50 @@ def accepter_remplacent(request, demande_id):
             if conflits.exists():
                 messages.error(request, "Vous n'êtes pas disponible sur cette période.")
                 return redirect('demandes_remplacent')
+
             demande.statue = 'EN_ATT_VA'
             demandeur_role = demande.name_employee.get_role()
-         
-            if demandeur_role == 'CG' :
-             demande.niveau_validation = 'CD'
-            elif demandeur_role == 'CD' :
-             demande.niveau_validation = 'DIR'   
+
+            if demandeur_role == 'CG':
+                demande.niveau_validation = 'CD'
+            elif demandeur_role == 'CD':
+                demande.niveau_validation = 'DIR'
             elif demandeur_role == 'DIR':
-             demande.statue = 'VA'   # auto-validated, no niveau_validation needed
+                demande.statue = 'VA'
             else:
-             demande.niveau_validation = 'CG'
-          
-        elif action == 'refuser' : 
+                demande.niveau_validation = 'CG'
+
+            demande.save()
+
+            Notification.objects.create(
+                employe=demande.name_employee,
+                demande=demande,
+                type_notif='UPD',
+                message=f"{demande.name_remplacent.nom} a accepté d'être votre remplaçant.",
+            )
+
+            if demande.statue == 'EN_ATT_VA':
+                validateur = get_validateur(demande.name_employee, demande.niveau_validation)
+                if validateur:
+                    Notification.objects.create(
+                        employe=validateur,
+                        demande=demande,
+                        type_notif='DMD',
+                        message=f"Nouvelle demande de congé à valider pour {demande.name_employee.nom}.",
+                    )
+
+        elif action == 'refuser':
             demande.statue = 'REF'
+            demande.save()
+            Notification.objects.create(
+                employe=demande.name_employee,
+                demande=demande,
+                type_notif='UPD',
+                message=f"{demande.name_remplacent.nom} a refusé d'être votre remplaçant.",
+            )
             
         demande.save()
-        return redirect('demandes_remplacent')
+        return redirect('home')
     return render(request, 'conges/accepter_remplacent.html', {'demande': demande})  
   
 
@@ -130,7 +224,7 @@ def valider_demande(request, demande_id):
     demande = get_object_or_404(DemandeConge, id=demande_id)
     chef = request.user.employe
     role = chef.get_role()
-    
+
     if demande.niveau_validation != role or not chef.meme_equipe(demande.name_employee):
         messages.error(request, "Cette demande n'est pas à votre niveau.")
         return redirect('demandes_a_valider')
@@ -138,9 +232,9 @@ def valider_demande(request, demande_id):
     if request.method == 'POST':
         action = request.POST.get('action')
         commentaire = request.POST.get('commentaire', '')
+        demande.commentaire = commentaire
 
         if action == 'valider':
-            
             if demande.niveau_validation == 'CG':
                 demande.niveau_validation = 'CD'
             elif demande.niveau_validation == 'CD':
@@ -150,12 +244,43 @@ def valider_demande(request, demande_id):
                 solde = demande.name_employee.solde
                 solde.solde_consomme += demande.Numbrejours
                 solde.save()
+
+            demande.save()
+
+            if demande.statue == 'VA':
+                Notification.objects.create(
+                    employe=demande.name_employee,
+                    demande=demande,
+                    type_notif='UPD',
+                    message="Votre demande de congé a été validée.",
+                )
+            else:
+                Notification.objects.create(
+                    employe=demande.name_employee,
+                    demande=demande,
+                    type_notif='UPD',
+                    message=f"Votre demande passe à l'étape de validation suivante ({demande.get_niveau_validation_display()}).",
+                )
+                validateur = get_validateur(demande.name_employee, demande.niveau_validation)
+                if validateur:
+                    Notification.objects.create(
+                        employe=validateur,
+                        demande=demande,
+                        type_notif='DMD',
+                        message=f"Nouvelle demande de congé à valider pour {demande.name_employee.nom}.",
+                    )
+
         elif action == 'refuser':
             demande.statue = 'REF'
+            demande.save()
+            Notification.objects.create(
+                employe=demande.name_employee,
+                demande=demande,
+                type_notif='UPD',
+                message=f"Votre demande de congé a été refusée par {role.label}.",
+            )
 
-        demande.commentaire = commentaire
-        demande.save()
-        return redirect('demandes_a_valider')
+        return redirect('home')
 
     return render(request, 'conges/valider_demande.html', {'demande': demande})
 
@@ -323,7 +448,7 @@ def rapport_absences_departement(request):
     if date_fin:
         demandes = demandes.filter(dateDebut__lte=date_fin)
         
-        demandes = demandes.order_by('dateDebut')
+    demandes = demandes.order_by('dateDebut')
 
     response = HttpResponse(content_type='application/pdf')
     response['Content-Disposition'] = 'attachment; filename="rapport_absences_departement.pdf"'
@@ -367,6 +492,15 @@ def mission_creer(request):
         form = MissionCreateForm()
     return render(request, 'conges/mission_creer.html', {'form': form})
 
+@login_required
+@role_required('DRH')
+def mission_supprimer(request, mission_id):
+    mission = get_object_or_404(Mission, id=mission_id)
+    if request.method == 'POST':
+        mission.delete()
+        messages.success(request, "Mission supprimée.")
+        return redirect('mission_liste')
+    return render(request, 'conges/mission_supprimer.html', {'mission': mission})
 
 @login_required
 @role_required('DRH')
@@ -385,7 +519,6 @@ def mission_corriger(request, mission_id):
         form = MissionCorrectionForm(instance=mission)
 
     return render(request, 'conges/mission_corriger.html', {'form': form, 'mission': mission})
-
 @login_required
 @role_required('CD')
 def chef_dashboard(request):
@@ -396,7 +529,16 @@ def chef_dashboard(request):
         messages.error(request, "Aucun département associé à ce compte.")
         return redirect('home')
 
-    employes = Employe.objects.filter(role__groupe__depratement=departement).distinct()
+    employes = Employe.objects.filter(
+        Q(role__groupe__depratement=departement) |
+        Q(role__dep=departement)
+    ).distinct()
+
+    tri = request.GET.get('tri', 'alphabetique')
+    if tri == 'groupe':
+        employes = employes.order_by('role__groupe__nom_de_groupe', 'nom')
+    else:
+        employes = employes.order_by('nom')
 
     demandes_en_attente = [
         d for d in DemandeConge.objects.filter(niveau_validation='CD', statue='EN_ATT_VA')
@@ -417,9 +559,9 @@ def chef_dashboard(request):
         'employes': employes,
         'demandes_en_attente': demandes_en_attente,
         'stats': stats,
+        'tri': tri,
     })
     
-    from django.utils import timezone
 
 @login_required
 @role_required('DIR')
@@ -432,7 +574,9 @@ def directeur_dashboard(request):
         return redirect('home')
 
     employes = Employe.objects.filter(
-        role__groupe__depratement__direction=direction
+    Q(role__groupe__depratement__direction=direction) |
+    Q(role__dep__direction=direction) |
+    Q(role__direction=direction)
     ).distinct()
 
     today = timezone.localdate()
@@ -463,3 +607,109 @@ def directeur_dashboard(request):
         'stats': stats,
         'demandes_en_attente': demandes_en_attente,
     })
+    
+import json
+
+@login_required
+@role_required('DRH')
+def drh_dashboard(request):
+    employes = Employe.objects.all()
+    today = timezone.localdate()
+
+    en_conge_aujourdhui = DemandeConge.objects.filter(
+        statue='VA',
+        dateDebut__lte=today,
+        dateFin__gte=today,
+    ).values('name_employee').distinct()
+
+    demandes = DemandeConge.objects.all()
+
+    soldes = Solde.objects.select_related('employe').all()
+    jours_consommes_total = sum(s.solde_consomme for s in soldes)
+    solde_global = sum(s.solde_actuel for s in soldes)
+
+    conges_par_direction_raw = (
+        demandes.filter(statue='VA')
+        .values('name_employee__role__direction__nom_de_direction')
+        .annotate(total=Count('id'))
+    )
+    direction_labels = [item['name_employee__role__direction__nom_de_direction'] or 'N/A' for item in conges_par_direction_raw]
+    direction_values = [item['total'] for item in conges_par_direction_raw]
+
+    conges_par_departement_raw = (
+        demandes.filter(statue='VA')
+        .values('name_employee__role__dep__nom_de_departement')
+        .annotate(total=Count('id'))
+    )
+    departement_labels = [item['name_employee__role__dep__nom_de_departement'] or 'N/A' for item in conges_par_departement_raw]
+    departement_values = [item['total'] for item in conges_par_departement_raw]
+
+    type_conge_dict = dict(DemandeConge.TYPE_CONGE_CHOICES)
+    conges_par_type_raw = (
+        demandes.filter(statue='VA')
+        .values('type_conge')
+        .annotate(total=Count('id'))
+    )
+    type_labels = [type_conge_dict.get(item['type_conge'], item['type_conge']) for item in conges_par_type_raw]
+    type_values = [item['total'] for item in conges_par_type_raw]
+
+    conges_par_mois_raw = (
+        demandes.filter(statue='VA')
+        .annotate(mois=TruncMonth('dateDebut'))
+        .values('mois')
+        .annotate(total=Count('id'))
+        .order_by('mois')
+    )
+    mois_labels = [item['mois'].strftime('%b %Y') for item in conges_par_mois_raw]
+    mois_values = [item['total'] for item in conges_par_mois_raw]
+
+    stats = {
+        'effectif_total': employes.count(),
+        'en_conge_aujourdhui': en_conge_aujourdhui.count(),
+        'en_attente': demandes.filter(statue='EN_ATT_VA').count(),
+        'validees': demandes.filter(statue='VA').count(),
+        'refusees': demandes.filter(statue='REF').count(),
+        'jours_consommes_total': jours_consommes_total,
+        'solde_global': solde_global,
+    }
+
+    return render(request, 'conges/drh_dashboard.html', {
+        'stats': stats,
+        'direction_labels': json.dumps(direction_labels),
+        'direction_values': json.dumps(direction_values),
+        'departement_labels': json.dumps(departement_labels),
+        'departement_values': json.dumps(departement_values),
+        'type_labels': json.dumps(type_labels),
+        'type_values': json.dumps(type_values),
+        'mois_labels': json.dumps(mois_labels),
+        'mois_values': json.dumps(mois_values),
+    })
+    
+@login_required
+def dashboard(request):
+    employe = getattr(request.user, 'employe', None)
+    if not employe:
+        messages.error(request, "Aucun profil employé associé à ce compte.")
+        return redirect('home')
+
+    role = employe.get_role()
+
+    if role == 'DRH':
+        return drh_dashboard(request)
+    elif role == 'DIR':
+        return directeur_dashboard(request)
+    elif role == 'CD':
+        return chef_dashboard(request)
+    else:
+        messages.error(request, "Aucun tableau de bord disponible pour votre rôle.")
+        return redirect('home')
+    
+@login_required
+def mes_notifications(request):
+    employe = getattr(request.user, 'employe', None)
+    if not employe:
+        messages.error(request, "Aucun profil employé associé à ce compte.")
+        return redirect('home')
+
+    notifications = Notification.objects.filter(employe=employe).order_by('-dateCreation', '-id')
+    return render(request, 'conges/mes_notifications.html', {'notifications': notifications})

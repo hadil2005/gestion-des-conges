@@ -1,37 +1,84 @@
-<!DOCTYPE html>
-<html>
-<head>
-    <title>Mes demandes</title>
-</head>
-<body>
-    <h2>Mes demandes de congé</h2>
+{% extends 'conges/base.html' %}
+{% block title %}Mes demandes{% endblock %}
 
-    <p><a href="{% url 'nouvelle_demande' %}">Nouvelle demande</a></p>
+{% block content %}
+<div class="flex min-h-screen">
 
-    {% if demandes %}
-        <ul>
-        {% for demande in demandes %}
-            <li>
-                <a href="{% url 'detail_demande' demande.id %}">
+    {% include 'conges/_sidebar.html' %}
 
-                {{ demande.dateDebut }} → {{ demande.dateFin }}
-                ({{ demande.Numbrejours }} jours) —
-                {{ demande.get_type_conge_display }} —
-                {{ demande.get_statue_display }}
-{% if demande.statue == 'EN_ATT_VA' %}
-    ({{ demande.get_niveau_validation_display }})
-{% elif demande.statue == 'REF' %}
-    {% if demande.niveau_validation %}
-        (par {{ demande.get_niveau_validation_display }})
-    {% else %}
-        (par le remplaçant)
-    {% endif %}
-{% endif %}
-            </li>
-        {% endfor %}
-        </ul>
-    {% else %}
-        <p>Vous n'avez aucune demande pour le moment.</p>
-    {% endif %}
-</body>
-</html>
+    <main class="flex-1 px-8 py-8">
+        <div class="flex items-start justify-between mb-8">
+            <h1 class="text-2xl font-semibold">Mes demandes</h1>
+            <div class="flex flex-col items-end gap-3">
+                <span class="text-sm text-neutral-400">{{ user.employe.nom }}</span>
+                <a href="{% url 'nouvelle_demande' %}"
+                   class="inline-flex items-center gap-2 bg-primary hover:bg-primary-light text-white font-medium rounded px-5 py-2.5 text-sm transition-colors">
+                    <svg xmlns="http://www.w3.org/2000/svg" class="w-4 h-4" viewBox="0 0 20 20" fill="currentColor">
+                        <path fill-rule="evenodd" d="M10 3a1 1 0 011 1v5h5a1 1 0 110 2h-5v5a1 1 0 11-2 0v-5H4a1 1 0 110-2h5V4a1 1 0 011-1z" clip-rule="evenodd" />
+                    </svg>
+                    Nouvelle demande de congé
+                </a>
+            </div>
+        </div>
+
+        {% if messages %}
+        <div class="mb-6 space-y-2">
+            {% for message in messages %}
+            <div class="bg-danger-pale border border-danger/20 text-danger text-sm rounded px-4 py-3">{{ message }}</div>
+            {% endfor %}
+        </div>
+        {% endif %}
+
+        {% if demandes %}
+        <div class="bg-white border border-neutral-200 rounded overflow-hidden">
+            <table class="w-full text-sm">
+                <thead>
+                    <tr class="text-left text-neutral-400 border-b border-neutral-100">
+                        <th class="px-6 py-3 font-medium">Période</th>
+                        <th class="px-6 py-3 font-medium">Durée</th>
+                        <th class="px-6 py-3 font-medium">Type</th>
+                        <th class="px-6 py-3 font-medium">Statut</th>
+                        <th class="px-6 py-3 font-medium"></th>
+                    </tr>
+                </thead>
+                <tbody class="divide-y divide-neutral-100">
+                    {% for demande in demandes %}
+                    <tr class="hover:bg-neutral-50">
+                        <td class="px-6 py-3">{{ demande.dateDebut }} → {{ demande.dateFin }}</td>
+                        <td class="px-6 py-3">{{ demande.Numbrejours }} jours</td>
+                        <td class="px-6 py-3">{{ demande.get_type_conge_display }}</td>
+                        <td class="px-6 py-3">
+                            <span class="text-xs font-medium px-3 py-1 rounded
+                                {% if demande.statue == 'VA' %}bg-success-pale text-success
+                                {% elif demande.statue == 'REF' %}bg-danger-pale text-danger
+                                {% elif demande.statue == 'EN_ATT_VA' or demande.statue == 'EN_ATT_RMP' %}bg-primary-pale/40 text-primary
+                                {% else %}bg-neutral-100 text-neutral-400{% endif %}">
+                                {{ demande.get_statue_display }}
+                                {% if demande.statue == 'EN_ATT_VA' %}
+                                    ({{ demande.get_niveau_validation_display }})
+                                {% elif demande.statue == 'REF' %}
+                                    {% if demande.niveau_validation %}
+                                        (par {{ demande.get_niveau_validation_display }})
+                                    {% else %}
+                                        (par le remplaçant)
+                                    {% endif %}
+                                {% endif %}
+                            </span>
+                        </td>
+                        <td class="px-6 py-3 text-right">
+                            <a href="{% url 'detail_demande' demande.id %}" class="text-primary hover:text-primary-light font-medium">Détails</a>
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+        {% else %}
+        <div class="bg-white border border-neutral-200 rounded px-6 py-12 text-center">
+            <p class="text-neutral-400 text-sm">Vous n'avez aucune demande pour le moment.</p>
+        </div>
+        {% endif %}
+
+    </main>
+</div>
+{% endblock %}

@@ -1,29 +1,55 @@
-<!DOCTYPE html>
-<html>
-<head>
-    <title>Mon solde</title>
-</head>
-<body>
-    <h2>Mon Solde </h2>
-
-    <table>
-        <tr>
-            <th>Solde annuel</th>
-            <td>{{ solde.solde_annuel }}</td>
-        </tr>
-        <tr>
-            <th>Solde récupération</th>
-            <td>{{ solde.solde_recuperation }}</td>
-        </tr>
-        <tr>
-            <th>Solde consommé</th>
-            <td>{{ solde.solde_consomme }} </td>
-        </tr>
-        <tr>
-            <th><strong>Solde actuel</strong></th>
-            <td><strong>{{ solde.solde_actuel }} </strong></td>
-        </tr>
-    </table>
-    <p><a href="{% url 'rapport_solde_historique' %}">Télécharger mon rapport (PDF)</a></p>
-</body>
-</html>
+{% extends 'conges/base.html' %}
+{% block title %}Mon Solde{% endblock %}
+ 
+{% block content %}
+<div class="flex min-h-screen">
+ 
+    {% include 'conges/_sidebar.html' %}
+ 
+    <main class="flex-1 px-8 py-8">
+ 
+        <div class="flex items-start justify-between mb-8">
+            <h1 class="text-2xl font-semibold">Mon Solde</h1>
+            <span class="text-sm text-neutral-400">{{ user.employe.nom }}</span>
+        </div>
+ 
+        {% if messages %}
+        <div class="mb-6 space-y-2">
+            {% for message in messages %}
+            <div class="bg-danger-pale border border-danger/20 text-danger text-sm rounded px-4 py-3">{{ message }}</div>
+            {% endfor %}
+        </div>
+        {% endif %}
+ 
+        <div class="bg-white border border-neutral-200 rounded overflow-hidden mb-6">
+            <div class="divide-y divide-neutral-100">
+                <div class="flex items-center justify-between px-6 py-4">
+                    <span class="text-neutral-400 text-sm">Solde annuel</span>
+                    <span class="font-medium">{{ solde.solde_annuel }}</span>
+                </div>
+                <div class="flex items-center justify-between px-6 py-4">
+                    <span class="text-neutral-400 text-sm">Solde récupération</span>
+                    <span class="font-medium">{{ solde.solde_recuperation }}</span>
+                </div>
+                <div class="flex items-center justify-between px-6 py-4">
+                    <span class="text-neutral-400 text-sm">Solde consommé</span>
+                    <span class="font-medium">{{ solde.solde_consomme }}</span>
+                </div>
+                <div class="flex items-center justify-between px-6 py-4 bg-primary-pale/30">
+                    <span class="font-medium">Solde actuel</span>
+                    <span class="text-xl font-semibold text-primary">{{ solde.solde_actuel }}</span>
+                </div>
+            </div>
+        </div>
+ 
+        <a href="{% url 'rapport_solde_historique' %}"
+           class="inline-flex items-center gap-2 text-sm font-medium text-primary hover:text-primary-light transition-colors">
+            Télécharger mon rapport (PDF)
+            <svg xmlns="http://www.w3.org/2000/svg" class="w-4 h-4" viewBox="0 0 20 20" fill="currentColor">
+                <path fill-rule="evenodd" d="M10 2a1 1 0 011 1v9.586l3.293-3.293a1 1 0 111.414 1.414l-5 5a1 1 0 01-1.414 0l-5-5a1 1 0 111.414-1.414L9 12.586V3a1 1 0 011-1z" clip-rule="evenodd" />
+            </svg>
+        </a>
+ 
+    </main>
+</div>
+{% endblock %}

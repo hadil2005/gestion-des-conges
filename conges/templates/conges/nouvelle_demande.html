@@ -1,26 +1,74 @@
-<!DOCTYPE html>
-<html>
-<head>
-    <title>Nouvelle demande de congé</title>
-</head>
-<body>
-    <h2>Nouvelle demande de congé</h2>
-
-    {% if messages %}
-        <ul>
-        {% for message in messages %}
-            <li>{{ message }}</li>
-        {% endfor %}
-        </ul>
-    {% endif %}
-
-    <form method="post" enctype="multipart/form-data">
-        {% csrf_token %}
-        {{ form.as_p }}
-    <button type="submit" name="action" value="Demander">Soumettre</button>
-    <button type="submit" name="action" value="brouillon">Enregistrer comme brouillon</button>
-    
-</form>
-    </form>
-</body>
-</html>
+{% extends 'conges/base.html' %}
+{% block title %}Nouvelle demande{% endblock %}
+ 
+{% block content %}
+<div class="flex min-h-screen">
+ 
+    {% include 'conges/_sidebar.html' %}
+ 
+    <main class="flex-1 px-8 py-8">
+ 
+        <div class="flex items-start justify-between mb-8">
+            <h1 class="text-2xl font-semibold">Nouvelle demande de congé</h1>
+            <span class="text-sm text-neutral-400">{{ user.employe.nom }}</span>
+        </div>
+ 
+        {% if messages %}
+<div class="mb-6 space-y-2">
+    {% for message in messages %}
+    <div class="inline-block bg-danger-pale border border-danger/20 text-danger text-sm rounded px-4 py-3">{{ message }}</div>
+    {% endfor %}
+</div>
+{% endif %}
+ 
+        <div class="bg-white border border-neutral-200 rounded p-6 max-w-xl">
+            <form method="post" enctype="multipart/form-data" class="space-y-5">
+                {% csrf_token %}
+ 
+                <div>
+                    <label class="block text-sm font-medium mb-1.5">Type de congé</label>
+                    {{ form.type_conge }}
+                </div>
+ 
+                <div>
+                    <label class="block text-sm font-medium mb-1.5">Remplaçant</label>
+                    {{ form.name_remplacent }}
+                </div>
+ 
+                <div class="grid grid-cols-2 gap-4">
+                    <div>
+                        <label class="block text-sm font-medium mb-1.5">Date début</label>
+                        {{ form.dateDebut }}
+                    </div>
+                    <div>
+                        <label class="block text-sm font-medium mb-1.5">Date fin</label>
+                        {{ form.dateFin }}
+                    </div>
+                </div>
+ 
+                <div>
+                    <label class="block text-sm font-medium mb-1.5">Motif</label>
+                    {{ form.motif }}
+                </div>
+ 
+                <div>
+                    <label class="block text-sm font-medium mb-1.5">Pièce jointe</label>
+                    {{ form.piece_Joine }}
+                </div>
+ 
+                <div class="flex items-center gap-3 pt-2">
+                    <button type="submit" name="action" value="soumettre"
+                            class="bg-primary hover:bg-primary-light text-white font-medium rounded px-5 py-2.5 text-sm transition-colors">
+                        Soumettre
+                    </button>
+                    <button type="submit" name="action" value="brouillon"
+                            class="border border-neutral-200 hover:bg-neutral-50 text-[#111111] font-medium rounded px-5 py-2.5 text-sm transition-colors">
+                        Enregistrer comme brouillon
+                    </button>
+                </div>
+            </form>
+        </div>
+ 
+    </main>
+</div>
+{% endblock %}

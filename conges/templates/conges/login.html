@@ -1,14 +1,72 @@
 <!DOCTYPE html>
-<html>
+<html lang="fr">
 <head>
+    <meta charset="UTF-8">
     <title>Connexion</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script>
+      tailwind.config = {
+        theme: {
+          extend: {
+            colors: {
+              primary: { DEFAULT: '#F6821F', light: '#F8A762', pale: '#FFCCA0' },
+              danger:  { DEFAULT: '#E25252', light: '#ED9796', pale: '#FCE4E4' },
+              success: { DEFAULT: '#13AA5D', light: '#71CD9E', pale: '#DCFDEC' },
+              neutral: { 50: '#F7F7F9', 100: '#EBECF1', 200: '#D9DEE4', 300: '#BDC5D2', 400: '#5A5A5A' },
+            },
+            fontFamily: { sans: ['Inter', 'sans-serif'] },
+            borderRadius: {
+              DEFAULT: '4px',
+              sm: '2px',
+            },
+          }
+        }
+      }
+    </script>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
 </head>
-<body>
-    <h2>Connexion</h2>
-    <form method="post">
+<body class="bg-neutral-50 font-sans text-[#111111] min-h-screen flex items-center justify-center">
+
+<div class="w-full max-w-md bg-white border border-neutral-200 rounded p-8">
+
+    <div class="flex flex-col items-center text-center mb-8">
+        <h1 class="text-xl font-semibold">Gestion des Congés</h1>
+        <p class="text-neutral-400 text-sm mt-1">Connectez-vous à votre espace employé</p>
+    </div>
+
+    {% if form.errors %}
+    <div class="bg-danger-pale border border-danger/20 text-danger text-sm rounded px-4 py-3 mb-6">
+        Identifiant ou mot de passe incorrect.
+    </div>
+    {% endif %}
+
+    <form method="post" class="space-y-5">
         {% csrf_token %}
-        {{ form.as_p }}
-        <button type="submit">Se connecter</button>
+
+        <div>
+            <label for="{{ form.username.id_for_label }}" class="block text-sm font-medium mb-1.5">Username</label>
+            {{ form.username }}
+        </div>
+
+        <div>
+            <div class="flex items-center justify-between mb-1.5">
+                <label for="{{ form.password.id_for_label }}" class="block text-sm font-medium">Mot de passe</label>
+                <a href="#" class="text-xs text-primary hover:text-primary-light">Mot de passe oublié ?</a>
+            </div>
+            {{ form.password }}
+        </div>
+
+        <button type="submit"
+                class="w-full bg-primary hover:bg-primary-light text-white font-medium rounded py-2.5 transition-colors">
+            Se connecter
+        </button>
     </form>
+
+    <div class="border-t border-neutral-100 mt-6 pt-6 text-center text-sm text-neutral-400">
+        Problème de connexion ? <a href="#" class="text-primary hover:text-primary-light">Contacter le support IT</a>
+    </div>
+
+</div>
 </body>
 </html>

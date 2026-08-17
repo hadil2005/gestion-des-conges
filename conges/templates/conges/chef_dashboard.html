@@ -1,45 +1,159 @@
-<!DOCTYPE html>
-<html lang="fr">
-<head>
-    <meta charset="UTF-8">
-    <title>Tableau de bord - Chef de département</title>
-</head>
-<body>
-    <h1>Tableau de bord — {{ departement.nom_de_departement }}</h1>
-
-    <p>Effectif: {{ stats.effectif }}</p>
-    <p>En attente: {{ stats.en_attente }}</p>
-    <p>Validées: {{ stats.validees }}</p>
-    <p>Refusées: {{ stats.refusees }}</p>
-
-    <h2>Employés du département</h2>
-    {% if employes %}
-    <table border="1">
-        <tr><th>Nom</th><th>Fonction</th></tr>
-        {% for e in employes %}
-        <tr><td>{{ e.nom }}</td><td>{{ e.fonction }}</td></tr>
-        {% endfor %}
-    </table>
-    {% else %}
-    <p>Aucun employé trouvé.</p>
-    {% endif %}
-
-    <h2>Demandes en attente de validation</h2>
-    {% if demandes_en_attente %}
-    <table border="1">
-        <tr><th>Employé</th><th>Type</th><th>Dates</th><th>Remplaçant</th><th>Action</th></tr>
+{% extends 'conges/base.html' %}
+{% block title %}Tableau de bord{% endblock %}
+ 
+{% block content %}
+<div class="flex min-h-screen">
+ 
+    {% include 'conges/_sidebar.html' %}
+ 
+    <main class="flex-1 px-8 py-8">
+ 
+        <div class="flex items-start justify-between mb-8">
+            <h1 class="text-2xl font-semibold">Tableau de bord — {{ departement.nom_de_departement }}</h1>
+            <span class="text-sm text-neutral-400">{{ user.employe.nom }}</span>
+        </div>
+ 
+        {% if messages %}
+        <div class="mb-6 space-y-2">
+            {% for message in messages %}
+            <div class="bg-danger-pale border border-danger/20 text-danger text-sm rounded px-4 py-3">{{ message }}</div>
+            {% endfor %}
+        </div>
+        {% endif %}
+ 
+        <!-- Stat cards -->
+        <div class="grid grid-cols-4 gap-4 mb-8">
+            <div class="bg-white border border-neutral-200 rounded px-5 py-4">
+                <p class="text-xs text-neutral-400 mb-1">Effectif</p>
+                <p class="text-xl font-semibold">{{ stats.effectif }}</p>
+            </div>
+            <div class="bg-primary-pale/30 border border-primary/20 rounded px-5 py-4">
+                <p class="text-xs text-neutral-400 mb-1">En attente</p>
+                <p class="text-xl font-semibold text-primary">{{ stats.en_attente }}</p>
+            </div>
+            <div class="bg-success-pale/40 border border-success/20 rounded px-5 py-4">
+                <p class="text-xs text-neutral-400 mb-1">Validées</p>
+                <p class="text-xl font-semibold text-success">{{ stats.validees }}</p>
+            </div>
+            <div class="bg-danger-pale/40 border border-danger/20 rounded px-5 py-4">
+                <p class="text-xs text-neutral-400 mb-1">Refusées</p>
+                <p class="text-xl font-semibold text-danger">{{ stats.refusees }}</p>
+            </div>
+        </div>
+ 
+        <!-- Employee table -->
+<div class="flex items-center justify-between py-2">
+    <h2 class="font-medium">Employés du département</h2>
+    <div class="flex items-center gap-2 text-sm">
+        <a href="?tri=alphabetique"
+           class="px-3 py-1.5 rounded {% if tri == 'alphabetique' %}bg-primary-pale/40 text-primary font-medium{% else %}text-neutral-400 hover:bg-neutral-50{% endif %}">
+            Ordre alphabétique
+        </a>
+        <a href="?tri=groupe"
+           class="px-3 py-1.5 rounded {% if tri == 'groupe' %}bg-primary-pale/40 text-primary font-medium{% else %}text-neutral-400 hover:bg-neutral-50{% endif %}">
+            Par groupe
+        </a>
+    </div>
+</div>        <div class="bg-white border border-neutral-200 rounded overflow-hidden mb-8">
+            {% if employes %}
+            <table class="w-full text-sm">
+                <thead>
+                   <tr class="text-left text-neutral-400 border-b border-neutral-100">
+                   <th class="px-6 py-3 font-medium">Nom</th>
+                   <th class="px-6 py-3 font-medium">Fonction</th>
+                   <th class="px-6 py-3 font-medium">Groupe</th>
+                   </tr>
+                </thead>
+                <tbody class="divide-y divide-neutral-100">
+                   {% for e in employes %}
+                  <tr class="hover:bg-neutral-50">
+                  <td class="px-6 py-3">{{ e.nom }}</td>
+                  <td class="px-6 py-3">{{ e.fonction }}</td>
+                  <td class="px-6 py-3">{{ e.role.first.groupe.nom_de_groupe|default:"—" }}</td>
+                  </tr>
+{% endfor %}
+                </tbody>
+            </table>
+            {% else %}
+            <p class="px-6 py-8 text-center text-sm text-neutral-400">Aucun employé trouvé.</p>
+            {% endif %}
+        </div>
+ 
+        <!-- Validation queue -->
+        <h2 class="py-2 font-medium">Demandes en attente de validation</h2>
+        <div class="bg-white border border-neutral-200 rounded overflow-hidden">
+            {% if demandes_en_attente %}
+            <table class="w-full text-sm">
+                <thead>
+                    <tr class="text-left text-neutral-400 border-b border-neutral-100">
+                        <th class="px-6 py-3 font-medium">Employé</th>
+                        <th class="px-6 py-3 font-medium">Type</th>
+                        <th class="px-6 py-3 font-medium">Période</th>
+                        <th class="px-6 py-3 font-medium">Durée</th>
+                        <th class="px-6 py-3 font-medium text-right">Action</th>
+                    </tr>
+                </thead>
+                <tbody class="divide-y divide-neutral-100">
+                    {% for d in demandes_en_attente %}
+                    <tr class="hover:bg-neutral-50">
+                        <td class="px-6 py-3">{{ d.name_employee.nom }}</td>
+                        <td class="px-6 py-3">{{ d.get_type_conge_display }}</td>
+                        <td class="px-6 py-3">{{ d.dateDebut }} → {{ d.dateFin }}</td>
+                        <td class="px-6 py-3">{{ d.Numbrejours }} jours</td>
+                        <td class="px-6 py-3 text-right">
+                            <button onclick="document.getElementById('modal-cd-validation-{{ d.id }}').classList.remove('hidden')"
+                                    class="text-primary hover:text-primary-light font-medium">
+                                Traiter
+                            </button>
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+            {% else %}
+            <p class="px-6 py-8 text-center text-sm text-neutral-400">Aucune demande en attente.</p>
+            {% endif %}
+        </div>
+ 
         {% for d in demandes_en_attente %}
-        <tr>
-            <td>{{ d.name_employee.nom }}</td>
-            <td>{{ d.get_type_conge_display }}</td>
-            <td>{{ d.dateDebut }} → {{ d.dateFin }}</td>
-            <td>{{ d.name_remplacent.nom }}</td>
-            <td><a href="{% url 'valider_demande' d.id %}">Traiter</a></td>
-        </tr>
+        <div id="modal-cd-validation-{{ d.id }}" class="hidden fixed inset-0 bg-black/40 flex items-center justify-center z-50 p-4">
+            <div class="bg-white rounded w-full max-w-md">
+                <div class="flex items-center justify-between px-6 py-4 border-b border-neutral-100">
+                    <h2 class="text-lg font-semibold">Demande de {{ d.name_employee.nom }}</h2>
+                    <button onclick="document.getElementById('modal-cd-validation-{{ d.id }}').classList.add('hidden')"
+                            class="text-neutral-400 hover:text-[#111111] text-xl leading-none">✕</button>
+                </div>
+                <div class="px-6 py-6">
+                    <p class="text-sm text-neutral-400 mb-1">Du {{ d.dateDebut }} au {{ d.dateFin }} ({{ d.Numbrejours }} jours)</p>
+                    <p class="text-sm text-neutral-400 mb-1">Type : {{ d.get_type_conge_display }}</p>
+                    {% if d.motif %}
+                    <p class="text-sm text-neutral-400 mb-4">Motif : {{ d.motif }}</p>
+                    {% endif %}
+                    <p class="text-sm text-neutral-400 mb-6">Remplaçant proposé : {{ d.name_remplacent.nom }}</p>
+ 
+                    <form method="post" action="{% url 'valider_demande' d.id %}" class="space-y-4">
+                        {% csrf_token %}
+                        <div>
+                            <label class="block text-sm font-medium mb-1.5">Commentaire (optionnel)</label>
+                            <textarea name="commentaire" rows="3"
+                                class="w-full border border-neutral-200 rounded px-3 py-2.5 text-sm focus:outline-none focus:border-primary focus:ring-1 focus:ring-primary"></textarea>
+                        </div>
+                        <div class="flex items-center gap-3">
+                            <button type="submit" name="action" value="valider"
+                                    class="bg-primary hover:bg-primary-light text-white font-medium rounded px-5 py-2.5 text-sm transition-colors">
+                                Valider
+                            </button>
+                            <button type="submit" name="action" value="refuser"
+                                    class="border border-neutral-200 hover:bg-neutral-50 text-[#111111] font-medium rounded px-5 py-2.5 text-sm transition-colors">
+                                Refuser
+                            </button>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>
         {% endfor %}
-    </table>
-    {% else %}
-    <p>Aucune demande en attente.</p>
-    {% endif %}
-</body>
-</html>
+ 
+    </main>
+</div>
+{% endblock %}

@@ -1,19 +1,47 @@
-<!DOCTYPE html>
-<html>
-<head><title>Rapport absences par département</title></head>
-<body>
-<h2>Rapport d'absences par département</h2>
+{% extends 'conges/base.html' %}
+{% block title %}Rapport d'absences{% endblock %}
 
-<form method="get" action="{% url 'rapport_absences_departement' %}">
-    <select name="departement">
-        <option value="">Tous les départements</option>
-        {% for dep in departements %}
-        <option value="{{ dep.id }}">{{ dep.nom_de_departement }}</option>
-        {% endfor %}
-    </select>
-    <input type="date" name="date_debut">
-    <input type="date" name="date_fin">
-    <button type="submit">Générer le PDF</button>
-</form>
-</body>
-</html>
+{% block content %}
+<div class="flex min-h-screen">
+
+    {% include 'conges/_sidebar.html' %}
+
+    <main class="flex-1 px-8 py-8">
+
+        <h1 class="text-2xl font-semibold mb-8">Rapport d'absences par département</h1>
+
+        <form method="get" action="{% url 'rapport_absences_departement' %}"
+              class="bg-white border border-neutral-200 rounded px-6 py-6 flex flex-wrap gap-4 items-end max-w-2xl">
+
+            <div>
+                <label class="block text-xs text-neutral-400 mb-1">Département</label>
+                <select name="departement"
+                        class="border border-neutral-200 rounded px-3 py-2 text-sm focus:outline-none focus:border-primary focus:ring-1 focus:ring-primary">
+                    <option value="">Tous les départements</option>
+                    {% for dep in departements %}
+                    <option value="{{ dep.id }}">{{ dep.nom_de_departement }}</option>
+                    {% endfor %}
+                </select>
+            </div>
+
+            <div>
+                <label class="block text-xs text-neutral-400 mb-1">Date début</label>
+                <input type="date" name="date_debut"
+                       class="border border-neutral-200 rounded px-3 py-2 text-sm focus:outline-none focus:border-primary focus:ring-1 focus:ring-primary">
+            </div>
+
+            <div>
+                <label class="block text-xs text-neutral-400 mb-1">Date fin</label>
+                <input type="date" name="date_fin"
+                       class="border border-neutral-200 rounded px-3 py-2 text-sm focus:outline-none focus:border-primary focus:ring-1 focus:ring-primary">
+            </div>
+
+            <button type="submit"
+                    class="bg-primary hover:bg-primary-light text-white font-medium rounded px-5 py-2.5 text-sm transition-colors">
+                Générer le PDF
+            </button>
+        </form>
+
+    </main>
+</div>
+{% endblock %}

@@ -1,0 +1,33 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <title>{% block title %}Gestion Congés{% endblock %}</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script>
+      tailwind.config = {
+        theme: {
+          extend: {
+            colors: {
+              primary: { DEFAULT: '#F6821F', light: '#F8A762', pale: '#FFCCA0' },
+              danger:  { DEFAULT: '#E25252', light: '#ED9796', pale: '#FCE4E4' },
+              success: { DEFAULT: '#13AA5D', light: '#71CD9E', pale: '#DCFDEC' },
+              neutral: { 50: '#F7F7F9', 100: '#EBECF1', 200: '#D9DEE4', 300: '#BDC5D2', 400: '#5A5A5A' },
+            },
+            fontFamily: { sans: ['Inter', 'sans-serif'] },
+            fontFamily: { sans: ['Inter', 'sans-serif'] },
+      borderRadius: {
+        DEFAULT: '4px',
+        sm: '2px',
+      },
+          }
+        }
+      }
+    </script>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+</head>
+<body class="bg-neutral-50 font-sans text-[#111111] min-h-screen">
+    {% block content %} {% endblock %}
+</body>
+</html>

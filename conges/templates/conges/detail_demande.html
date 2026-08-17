@@ -1,32 +1,84 @@
-<!DOCTYPE html>
-<html>
-<head>
-    <title>Détail de la demande</title>
-</head>
-<body>
-    <h2>Demande du {{ demande.dateDebut }} au {{ demande.dateFin }}</h2>
-
-    <p>Nombre de jours: {{ demande.Numbrejours }}</p>
-    <p>Type de congé: {{ demande.get_type_conge_display }}</p>
-    <p>Motif: {{ demande.motif }}</p>
-    <p>Remplaçant proposé: {{ demande.name_remplacent }}</p>
-    <p>Statut: {{ demande.get_statue_display }}</p>
-
-    {% if demande.statue == 'EN_ATT_VA' %}
-        <p>Niveau actuel: {{ demande.get_niveau_validation_display }}</p>
-    {% endif %}
-
-    {% if demande.statue == 'REF' %}
-        {% if demande.niveau_validation %}
-            <p>Refusé par: {{ demande.get_niveau_validation_display }}</p>
-        {% else %}
-            <p>Refusé par: le remplaçant</p>
-        {% endif %}
-        {% if demande.commentaire %}
-            <p>Commentaire: {{ demande.commentaire }}</p>
-        {% endif %}
-    {% endif %}
-
-    <p><a href="{% url 'mes_demandes' %}">Retour à mes demandes</a></p>
-</body>
-</html>
+{% extends 'conges/base.html' %}
+{% block title %}Détail demande{% endblock %}
+ 
+{% block content %}
+<div class="flex min-h-screen">
+ 
+    {% include 'conges/_sidebar.html' %}
+ 
+    <main class="flex-1 px-8 py-8">
+ 
+        <div class="flex items-start justify-between mb-8">
+            <h1 class="text-2xl font-semibold">Détail de la demande</h1>
+            <span class="text-sm text-neutral-400">{{ user.employe.nom }}</span>
+        </div>
+ 
+        <div class="bg-white border border-neutral-200 rounded overflow-hidden max-w-2xl">
+ 
+            <div class="px-6 py-4 border-b border-neutral-100 flex items-center justify-between">
+                <span class="font-medium">{{ demande.get_type_conge_display }}</span>
+                <span class="text-xs font-medium px-3 py-1 rounded
+                    {% if demande.statue == 'VA' %}bg-success-pale text-success
+                    {% elif demande.statue == 'REF' %}bg-danger-pale text-danger
+                    {% elif demande.statue == 'EN_ATT_VA' or demande.statue == 'EN_ATT_RMP' %}bg-primary-pale text-primary
+                    {% else %}bg-neutral-100 text-neutral-400{% endif %}">
+                    {{ demande.get_statue_display }}
+                </span>
+            </div>
+ 
+            <div class="divide-y divide-neutral-100">
+                <div class="flex items-center justify-between px-6 py-4">
+                    <span class="text-neutral-400 text-sm">Période</span>
+                    <span class="font-medium">{{ demande.dateDebut }} → {{ demande.dateFin }}</span>
+                </div>
+                <div class="flex items-center justify-between px-6 py-4">
+                    <span class="text-neutral-400 text-sm">Durée</span>
+                    <span class="font-medium">{{ demande.Numbrejours }} jours</span>
+                </div>
+                <div class="flex items-center justify-between px-6 py-4">
+                    <span class="text-neutral-400 text-sm">Remplaçant</span>
+                    <span class="font-medium">{{ demande.name_remplacent.nom }}</span>
+                </div>
+                {% if demande.motif %}
+                <div class="flex items-center justify-between px-6 py-4">
+                    <span class="text-neutral-400 text-sm">Motif</span>
+                    <span class="font-medium">{{ demande.motif }}</span>
+                </div>
+                {% endif %}
+                {% if demande.statue == 'EN_ATT_VA' %}
+                <div class="flex items-center justify-between px-6 py-4">
+                    <span class="text-neutral-400 text-sm">Niveau de validation</span>
+                    <span class="font-medium">{{ demande.get_niveau_validation_display }}</span>
+                </div>
+                {% endif %}
+                {% if demande.statue == 'REF' %}
+                <div class="flex items-center justify-between px-6 py-4">
+                    <span class="text-neutral-400 text-sm">Refusée par</span>
+                    <span class="font-medium">
+                        {% if demande.niveau_validation %}{{ demande.get_niveau_validation_display }}{% else %}le remplaçant{% endif %}
+                    </span>
+                </div>
+                {% endif %}
+                {% if demande.commentaire %}
+                <div class="px-6 py-4">
+                    <span class="text-neutral-400 text-sm block mb-1">Commentaire</span>
+                    <span class="font-medium">{{ demande.commentaire }}</span>
+                </div>
+                {% endif %}
+                {% if demande.piece_Joine %}
+                <div class="flex items-center justify-between px-6 py-4">
+                    <span class="text-neutral-400 text-sm">Pièce jointe</span>
+                    <a href="{{ demande.piece_Joine.url }}" target="_blank" class="text-primary hover:text-primary-light font-medium">Voir le fichier</a>
+                </div>
+                {% endif %}
+            </div>
+ 
+        </div>
+ 
+        <div class="mt-6 max-w-2xl">
+            <a href="{% url 'mes_demandes' %}" class="text-sm text-neutral-400 hover:text-[#111111]">← Retour à mes demandes</a>
+        </div>
+ 
+    </main>
+</div>
+{% endblock %}

@@ -21,6 +21,7 @@ urlpatterns = [
       path('missions/', views.mission_liste, name='mission_liste'),
       path('missions/creer/', views.mission_creer, name='mission_creer'),
       path('missions/<int:mission_id>/corriger/', views.mission_corriger, name='mission_corriger'),
-      path('dashboard_chef/', views.chef_dashboard, name='chef_dashboard'),
-      path('dashboard_directeur/', views.directeur_dashboard, name='directeur_dashboard'),
+      path('dashboard/', views.dashboard, name='dashboard'),
+      path('mes_notifications/', views.mes_notifications, name='mes_notifications'),
+      path('missions/<int:mission_id>/supprimer/', views.mission_supprimer, name='mission_supprimer'),
 ]

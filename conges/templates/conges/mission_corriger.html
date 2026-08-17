@@ -1,20 +1,37 @@
-<!DOCTYPE html>
-<html lang="fr">
-<head>
-    <meta charset="UTF-8">
-    <title>Corriger mission</title>
-</head>
-<body>
-    <h1>Corriger mission</h1>
-    <p><strong>Employé :</strong> {{ mission.employe.nom }} {{ mission.employe.prenom }}</p>
-    <p><strong>Période :</strong> {{ mission.dateDebut }} → {{ mission.dateFin }}</p>
-    <p><strong>Motif :</strong> {{ mission.motif|default:"—" }}</p>
+{% extends 'conges/base.html' %}
+{% block title %}Corriger mission{% endblock %}
 
-    <form method="post">
-        {% csrf_token %}
-        {{ form.as_p }}
-        <button type="submit" name="save">Enregistrer</button>
-        <button type="submit" name="decline">Annuler</button>
-    </form>
-</body>
+{% block content %}
+<div class="flex min-h-screen">
+
+    {% include 'conges/_sidebar.html' %}
+
+    <main class="flex-1 px-8 py-8 max-w-xl">
+
+        <h1 class="text-2xl font-semibold mb-8">Corriger mission</h1>
+
+        <div class="bg-white border border-neutral-200 rounded px-6 py-6 mb-6 text-sm space-y-1">
+            <p><span class="text-neutral-400">Employé :</span> {{ mission.employe.nom }}</p>
+            <p><span class="text-neutral-400">Période :</span> {{ mission.dateDebut }} → {{ mission.dateFin }}</p>
+            <p><span class="text-neutral-400">Motif :</span> {{ mission.motif|default:"—" }}</p>
+        </div>
+
+        <form method="post" class="bg-white border border-neutral-200 rounded px-6 py-6 space-y-4">
+            {% csrf_token %}
+            {{ form.as_p }}
+            <div class="flex gap-3 pt-2">
+                <button type="submit" name="save"
+                        class="bg-primary hover:bg-primary-light text-white font-medium rounded px-5 py-2.5 text-sm transition-colors">
+                    Enregistrer
+                </button>
+                <button type="submit" name="decline"
+                        class="border border-neutral-200 hover:bg-neutral-50 font-medium rounded px-5 py-2.5 text-sm transition-colors">
+                    Annuler
+                </button>
+            </div>
+        </form>
+
+    </main>
+</div>
+{% endblock %}
 </html>

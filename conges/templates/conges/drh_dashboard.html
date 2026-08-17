@@ -1,0 +1,165 @@
+{% extends 'conges/base.html' %}
+{% block title %}Tableau de bord DRH{% endblock %}
+ 
+{% block content %}
+<div class="flex min-h-screen">
+ 
+    {% include 'conges/_sidebar.html' %}
+ 
+    <main class="flex-1 px-8 py-8">
+ 
+        <div class="flex items-start justify-between mb-8">
+            <h1 class="text-2xl font-semibold">Tableau de bord DRH</h1>
+            <span class="text-sm text-neutral-400">{{ user.employe.nom }}</span>
+        </div>
+ 
+        {% if messages %}
+        <div class="mb-6 space-y-2">
+            {% for message in messages %}
+            <div class="bg-danger-pale border border-danger/20 text-danger text-sm rounded px-4 py-3">{{ message }}</div>
+            {% endfor %}
+        </div>
+        {% endif %}
+ 
+        <!-- Stat cards row 1 -->
+<div class="grid grid-cols-4 gap-4 mb-4">
+    <div class="bg-white border border-neutral-200 rounded px-5 py-4">
+        <p class="text-xs text-neutral-400 mb-1">Effectif total</p>
+        <p class="text-xl font-semibold">{{ stats.effectif_total }}</p>
+    </div>
+    <div class="bg-primary-pale/30 border border-primary/20 rounded px-5 py-4">
+        <p class="text-xs text-neutral-400 mb-1">En attente</p>
+        <p class="text-xl font-semibold text-primary">{{ stats.en_attente }}</p>
+    </div>
+    <div class="bg-success-pale/40 border border-success/20 rounded px-5 py-4">
+        <p class="text-xs text-neutral-400 mb-1">Validées</p>
+        <p class="text-xl font-semibold text-success">{{ stats.validees }}</p>
+    </div>
+    <div class="bg-danger-pale/40 border border-danger/20 rounded px-5 py-4">
+        <p class="text-xs text-neutral-400 mb-1">Refusées</p>
+        <p class="text-xl font-semibold text-danger">{{ stats.refusees }}</p>
+    </div>
+</div>
+
+<!-- Stat cards row 2 -->
+<div class="grid grid-cols-3 gap-4 mb-8">
+    <div class="bg-white border border-neutral-200 rounded px-5 py-4">
+        <p class="text-xs text-neutral-400 mb-1">En congé aujourd'hui</p>
+        <p class="text-xl font-semibold">{{ stats.en_conge_aujourdhui }}</p>
+    </div>
+    <div class="bg-white border border-neutral-200 rounded px-5 py-4">
+        <p class="text-xs text-neutral-400 mb-1">Taux d'absence</p>
+        <p class="text-xl font-semibold">{{ stats.taux_absence }}%</p>
+    </div>
+    <div class="bg-white border border-neutral-200 rounded px-5 py-4">
+        <p class="text-xs text-neutral-400 mb-1">Jours consommés</p>
+        <p class="text-xl font-semibold">{{ stats.jours_consommes_total }}</p>
+    </div>
+</div>
+ 
+        <!-- Charts grid -->
+       <div class="grid grid-cols-2 gap-6">
+
+    <div class="bg-white border border-neutral-200 rounded p-6">
+        <h2 class="font-medium mb-4">Congés par mois</h2>
+        <div class="h-56">
+            <canvas id="chartMois"></canvas>
+        </div>
+    </div>
+
+    <div class="bg-white border border-neutral-200 rounded p-6">
+    <h2 class="font-medium mb-4">Répartition par type de congé</h2>
+    <div class="h-56 flex items-center justify-center">
+        <canvas id="chartType"></canvas>
+    </div>
+    </div>
+
+    <div class="bg-white border border-neutral-200 rounded p-6">
+        <h2 class="font-medium mb-4">Congés par département</h2>
+        <div class="h-56">
+            <canvas id="chartDepartement"></canvas>
+        </div>
+    </div>
+
+    <div class="bg-white border border-neutral-200 rounded p-6">
+        <h2 class="font-medium mb-4">Congés par direction</h2>
+        <div class="h-56">
+            <canvas id="chartDirection"></canvas>
+        </div>
+    </div>
+
+</div>
+ 
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4"></script>
+<script>
+    const primary = '#F6821F';
+    const success = '#13AA5D';
+    const danger = '#E25252';
+    const neutral = '#D9DEE4';
+    const palette = [primary, success, danger, '#71CD9E', '#F8A762', '#A0A6BC'];
+ 
+    new Chart(document.getElementById('chartMois'), {
+        type: 'bar',
+        data: {
+            labels: {{ mois_labels|safe }},
+            datasets: [{
+                data: {{ mois_values|safe }},
+                backgroundColor: primary,
+                borderRadius: 4,
+            }]
+        },
+        options: {
+            plugins: { legend: { display: false } },
+            scales: { y: { beginAtZero: true, ticks: { stepSize: 1 } } }
+        }
+    });
+ 
+    new Chart(document.getElementById('chartType'), {
+        type: 'doughnut',
+        data: {
+            labels: {{ type_labels|safe }},
+            datasets: [{
+                data: {{ type_values|safe }},
+                backgroundColor: palette,
+            }]
+        },
+        options: {
+            plugins: { legend: { position: 'bottom' } }
+        }
+    });
+ 
+    new Chart(document.getElementById('chartDepartement'), {
+        type: 'bar',
+        data: {
+            labels: {{ departement_labels|safe }},
+            datasets: [{
+                data: {{ departement_values|safe }},
+                backgroundColor: success,
+                borderRadius: 4,
+            }]
+        },
+        options: {
+            indexAxis: 'y',
+            plugins: { legend: { display: false } },
+            scales: { x: { beginAtZero: true, ticks: { stepSize: 1 } } }
+        }
+    });
+ 
+    new Chart(document.getElementById('chartDirection'), {
+        type: 'bar',
+        data: {
+            labels: {{ direction_labels|safe }},
+            datasets: [{
+                data: {{ direction_values|safe }},
+                backgroundColor: '#F8A762',
+                borderRadius: 4,
+            }]
+        },
+        options: {
+            indexAxis: 'y',
+            plugins: { legend: { display: false } },
+            scales: { x: { beginAtZero: true, ticks: { stepSize: 1 } } }
+        }
+    });
+</script>
+{% endblock %}

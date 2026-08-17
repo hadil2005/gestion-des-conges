@@ -1,70 +1,112 @@
-<!DOCTYPE html>
-<html>
-<head>
-    <title>Recherche de Demandes</title>
-</head>
-<body>
+{% extends 'conges/base.html' %}
+{% block title %}Recherche de demandes{% endblock %}
 
-<h2>Recherche de Demandes</h2>
+{% block content %}
+<div class="flex min-h-screen">
 
-<form method="get">
-    <input type="text" name="nom" placeholder="Nom employé" value="{{ nom }}">
+    {% include 'conges/_sidebar.html' %}
 
-    <select name="departement">
-        <option value="">Tous les départements</option>
-        {% for dep in departements %}
-        <option value="{{ dep.id }}" {% if departement == dep.id|stringformat:"s" %}selected{% endif %}>{{ dep.nom_de_departement }}</option>
-        {% endfor %}
-    </select>
+    <main class="flex-1 px-8 py-8">
 
-    <select name="direction">
-        <option value="">Toutes les directions</option>
-        {% for dir in directions %}
-        <option value="{{ dir.id }}" {% if direction == dir.id|stringformat:"s" %}selected{% endif %}>{{ dir.nom_de_direction }}</option>
-        {% endfor %}
-    </select>
+        <h1 class="text-2xl font-semibold mb-8">Recherche de demandes</h1>
 
-    <input type="date" name="date_debut" value="{{ date_debut }}">
-    <input type="date" name="date_fin" value="{{ date_fin }}">
+        <form method="get" class="bg-white border border-neutral-200 rounded px-6 py-6 mb-6 flex flex-wrap gap-4 items-end">
+            <div>
+                <label class="block text-xs text-neutral-400 mb-1">Nom employé</label>
+                <input type="text" name="nom" value="{{ nom }}"
+                       class="border border-neutral-200 rounded px-3 py-2 text-sm focus:outline-none focus:border-primary focus:ring-1 focus:ring-primary">
+            </div>
 
-    <select name="statut">
-        <option value="">Tous les statuts</option>
-        {% for code, label in statut_choices %}
-        <option value="{{ code }}" {% if statut == code %}selected{% endif %}>{{ label }}</option>
-        {% endfor %}
-    </select>
+            <div>
+                <label class="block text-xs text-neutral-400 mb-1">Département</label>
+                <select name="departement"
+                        class="border border-neutral-200 rounded px-3 py-2 text-sm focus:outline-none focus:border-primary focus:ring-1 focus:ring-primary">
+                    <option value="">Tous les départements</option>
+                    {% for dep in departements %}
+                    <option value="{{ dep.id }}" {% if departement == dep.id|stringformat:"s" %}selected{% endif %}>{{ dep.nom_de_departement }}</option>
+                    {% endfor %}
+                </select>
+            </div>
 
-    <select name="type_conge">
-        <option value="">Tous les types</option>
-        <option value="1" {% if type_conge == '1' %}selected{% endif %}>Congé xxx</option>
-        <option value="2" {% if type_conge == '2' %}selected{% endif %}>Congé maladie</option>
-        <option value="3" {% if type_conge == '3' %}selected{% endif %}>Congé xx</option>
-        <option value="AU" {% if type_conge == 'AU' %}selected{% endif %}>Autre</option>
-    </select>
+            <div>
+                <label class="block text-xs text-neutral-400 mb-1">Direction</label>
+                <select name="direction"
+                        class="border border-neutral-200 rounded px-3 py-2 text-sm focus:outline-none focus:border-primary focus:ring-1 focus:ring-primary">
+                    <option value="">Toutes les directions</option>
+                    {% for dir in directions %}
+                    <option value="{{ dir.id }}" {% if direction == dir.id|stringformat:"s" %}selected{% endif %}>{{ dir.nom_de_direction }}</option>
+                    {% endfor %}
+                </select>
+            </div>
 
-    <button type="submit">Rechercher</button>
-</form>
+            <div>
+                <label class="block text-xs text-neutral-400 mb-1">Date début</label>
+                <input type="date" name="date_debut" value="{{ date_debut }}"
+                       class="border border-neutral-200 rounded px-3 py-2 text-sm focus:outline-none focus:border-primary focus:ring-1 focus:ring-primary">
+            </div>
 
-<table>
-    <tr>
-        <th>Employé</th>
-        <th>Statut</th>
-        <th>Niveau</th>
-        <th>Type</th>
-        <th>Date</th>
-    </tr>
-    {% for demande in demandes %}
-    <tr>
-        <td>{{ demande.name_employee }}</td>
-        <td>{{ demande.get_statue_display }}</td>
-        <td>{{ demande.niveau_validation }}</td>
-        <td>{{ demande.get_type_conge_display }}</td>
-        <td>{{ demande.dateCreation }}</td>
-    </tr>
-    {% empty %}
-    <tr><td colspan="5">Aucune demande trouvée.</td></tr>
-    {% endfor %}
-</table>
+            <div>
+                <label class="block text-xs text-neutral-400 mb-1">Date fin</label>
+                <input type="date" name="date_fin" value="{{ date_fin }}"
+                       class="border border-neutral-200 rounded px-3 py-2 text-sm focus:outline-none focus:border-primary focus:ring-1 focus:ring-primary">
+            </div>
 
-</body>
-</html>
+            <div>
+                <label class="block text-xs text-neutral-400 mb-1">Statut</label>
+                <select name="statut"
+                        class="border border-neutral-200 rounded px-3 py-2 text-sm focus:outline-none focus:border-primary focus:ring-1 focus:ring-primary">
+                    <option value="">Tous les statuts</option>
+                    {% for code, label in statut_choices %}
+                    <option value="{{ code }}" {% if statut == code %}selected{% endif %}>{{ label }}</option>
+                    {% endfor %}
+                </select>
+            </div>
+
+            <div>
+                <label class="block text-xs text-neutral-400 mb-1">Type de congé</label>
+                <select name="type_conge"
+                        class="border border-neutral-200 rounded px-3 py-2 text-sm focus:outline-none focus:border-primary focus:ring-1 focus:ring-primary">
+                    <option value="">Tous les types</option>
+                    <option value="1" {% if type_conge == '1' %}selected{% endif %}>Congé xxx</option>
+                    <option value="2" {% if type_conge == '2' %}selected{% endif %}>Congé maladie</option>
+                    <option value="3" {% if type_conge == '3' %}selected{% endif %}>Congé xx</option>
+                    <option value="AU" {% if type_conge == 'AU' %}selected{% endif %}>Autre</option>
+                </select>
+            </div>
+
+            <button type="submit"
+                    class="bg-primary hover:bg-primary-light text-white font-medium rounded px-5 py-2.5 text-sm transition-colors">
+                Rechercher
+            </button>
+        </form>
+
+        <div class="bg-white border border-neutral-200 rounded overflow-hidden">
+            <table class="w-full text-sm">
+                <thead>
+                    <tr class="text-left text-neutral-400 border-b border-neutral-100">
+                        <th class="px-6 py-3 font-medium">Employé</th>
+                        <th class="px-6 py-3 font-medium">Statut</th>
+                        <th class="px-6 py-3 font-medium">Niveau</th>
+                        <th class="px-6 py-3 font-medium">Type</th>
+                        <th class="px-6 py-3 font-medium">Date</th>
+                    </tr>
+                </thead>
+                <tbody class="divide-y divide-neutral-100">
+                    {% for demande in demandes %}
+                    <tr class="hover:bg-neutral-50">
+                        <td class="px-6 py-3">{{ demande.name_employee }}</td>
+                        <td class="px-6 py-3">{{ demande.get_statue_display }}</td>
+                        <td class="px-6 py-3">{{ demande.niveau_validation }}</td>
+                        <td class="px-6 py-3">{{ demande.get_type_conge_display }}</td>
+                        <td class="px-6 py-3">{{ demande.dateCreation }}</td>
+                    </tr>
+                    {% empty %}
+                    <tr><td colspan="5" class="px-6 py-8 text-center text-neutral-400">Aucune demande trouvée.</td></tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+
+    </main>
+</div>
+{% endblock %}
