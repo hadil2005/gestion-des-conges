@@ -24,4 +24,8 @@ urlpatterns = [
       path('dashboard/', views.dashboard, name='dashboard'),
       path('mes_notifications/', views.mes_notifications, name='mes_notifications'),
       path('missions/<int:mission_id>/supprimer/', views.mission_supprimer, name='mission_supprimer'),
+      path('nouvelle_demande/<int:demande_id>/', views.nouvelle_demande, name='modifier_demande'),
+      path('employes/', views.liste_employes, name='liste_employes'),
+      path('employes/<int:employe_id>/modifier/', views.modifier_employe_role, name='modifier_employe_role'),
+      path('employes/<int:employe_id>/supprimer/', views.supprimer_employe, name='supprimer_employe'),
 ]

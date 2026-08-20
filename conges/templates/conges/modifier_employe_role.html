@@ -1,0 +1,115 @@
+{% extends 'conges/base.html' %}
+{% block title %}Modifier {{ employe.nom }}{% endblock %}
+
+{% block content %}
+<div class="flex min-h-screen">
+
+    {% include 'conges/_sidebar.html' %}
+
+    <main class="flex-1 px-8 py-8">
+
+        <div class="flex items-start justify-between mb-8">
+            <h1 class="text-2xl font-semibold">Modifier — {{ employe.nom }}</h1>
+            <div class="flex items-center gap-3">
+                {% include 'conges/_notif_bell.html' %}
+                <span class="text-sm text-neutral-400">{{ user.employe.nom }}</span>
+            </div>
+        </div>
+
+        {% if messages %}
+        <div class="mb-6 space-y-2">
+            {% for message in messages %}
+            <div class="bg-danger-pale border border-danger/20 text-danger text-sm rounded px-4 py-3">{{ message }}</div>
+            {% endfor %}
+        </div>
+        {% endif %}
+
+        <div class="bg-white border border-neutral-200 rounded p-6 max-w-xl">
+            <div class="mb-5 pb-5 border-b border-neutral-100">
+                <p class="text-sm text-neutral-400">Fonction</p>
+                <p class="font-medium">{{ employe.fonction }}</p>
+                {% if existing_role %}
+                <p class="text-xs text-neutral-400 mt-2">Rôle actuel : {{ existing_role.role.get_name_display }}</p>
+                {% endif %}
+            </div>
+
+            <form method="post" class="space-y-5">
+                {% csrf_token %}
+
+                <div>
+                    <label class="block text-sm font-medium mb-1.5">Rôle</label>
+                    <select name="role" id="id_role"
+                            class="w-full border border-neutral-200 rounded px-3 py-2.5 text-sm focus:outline-none focus:border-primary focus:ring-1 focus:ring-primary">
+                        {% for code, label in role_choices %}
+                        <option value="{{ code }}" {% if existing_role and existing_role.role.name == code %}selected{% endif %}>{{ label }}</option>
+                        {% endfor %}
+                    </select>
+                </div>
+
+                <div id="field-groupe">
+                    <label class="block text-sm font-medium mb-1.5">Groupe</label>
+                    <select name="groupe"
+                            class="w-full border border-neutral-200 rounded px-3 py-2.5 text-sm focus:outline-none focus:border-primary focus:ring-1 focus:ring-primary">
+                        <option value="">----------</option>
+                        {% for g in groupes %}
+                        <option value="{{ g.id }}" {% if existing_role and existing_role.groupe_id == g.id %}selected{% endif %}>{{ g.nom_de_groupe }}</option>
+                        {% endfor %}
+                    </select>
+                </div>
+
+                <div id="field-departement" class="hidden">
+                    <label class="block text-sm font-medium mb-1.5">Département</label>
+                    <select name="departement"
+                            class="w-full border border-neutral-200 rounded px-3 py-2.5 text-sm focus:outline-none focus:border-primary focus:ring-1 focus:ring-primary">
+                        <option value="">----------</option>
+                        {% for d in departements %}
+                        <option value="{{ d.id }}" {% if existing_role and existing_role.dep_id == d.id %}selected{% endif %}>{{ d.nom_de_departement }}</option>
+                        {% endfor %}
+                    </select>
+                </div>
+
+                <div id="field-direction" class="hidden">
+                    <label class="block text-sm font-medium mb-1.5">Direction</label>
+                    <select name="direction"
+                            class="w-full border border-neutral-200 rounded px-3 py-2.5 text-sm focus:outline-none focus:border-primary focus:ring-1 focus:ring-primary">
+                        <option value="">----------</option>
+                        {% for dir in directions %}
+                        <option value="{{ dir.id }}" {% if existing_role and existing_role.direction_id == dir.id %}selected{% endif %}>{{ dir.nom_de_direction }}</option>
+                        {% endfor %}
+                    </select>
+                </div>
+
+                <div class="flex items-center gap-3 pt-2">
+                    <button type="submit"
+                            class="bg-primary hover:bg-primary-light text-white font-medium rounded px-5 py-2.5 text-sm transition-colors">
+                        Enregistrer
+                    </button>
+                    <a href="{% url 'liste_employes' %}" class="text-sm text-neutral-400 hover:text-[#111111]">Annuler</a>
+                </div>
+            </form>
+        </div>
+
+    </main>
+</div>
+
+<script>
+function toggleScopeField() {
+    const role = document.getElementById('id_role').value;
+    document.getElementById('field-groupe').classList.add('hidden');
+    document.getElementById('field-departement').classList.add('hidden');
+    document.getElementById('field-direction').classList.add('hidden');
+
+    if (role === 'ES' || role === 'CG') {
+        document.getElementById('field-groupe').classList.remove('hidden');
+    } else if (role === 'CD') {
+        document.getElementById('field-departement').classList.remove('hidden');
+    } else if (role === 'DIR') {
+        document.getElementById('field-direction').classList.remove('hidden');
+    }
+}
+document.addEventListener('DOMContentLoaded', function() {
+    document.getElementById('id_role').addEventListener('change', toggleScopeField);
+    toggleScopeField();
+});
+</script>
+{% endblock %}

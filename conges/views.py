@@ -1,8 +1,8 @@
 from django.shortcuts import render, redirect
 from django.contrib.auth.decorators import login_required
 from .decoraters import role_required
-from .forms import DemandeCongeForm, NouvelEmployeForm,MissionCreateForm, MissionCorrectionForm
-from .models import DemandeConge, Employe, Mission, Solde, Notification, Role
+from .forms import DemandeCongeForm, NouvelEmployeForm,MissionCreateForm, MissionCorrectionForm, DirectionForm, DepartementForm, GroupeForm, SoldeForm
+from .models import DemandeConge, Employe, Mission, Solde, Notification, Role, EmployeRole, Groupe
 from .models import Departement, Direction
 from django.shortcuts import get_object_or_404
 from django.contrib import messages 
@@ -36,6 +36,21 @@ def get_validateur(employe, niveau):
         return direction.directeur if direction else None
     return None
 
+def sync_chef_role(employe, role_code, groupe=None, departement=None, direction=None):
+    """Create or update this employee's EmployeRole to match a chef assignment."""
+    role_obj, _ = Role.objects.get_or_create(name=role_code)
+    existing = employe.role.first()
+    if existing:
+        existing.role = role_obj
+        existing.groupe = groupe
+        existing.dep = departement
+        existing.direction = direction
+        existing.save()
+    else:
+        EmployeRole.objects.create(
+            employe=employe, role=role_obj,
+            groupe=groupe, dep=departement, direction=direction
+        )
 @login_required
 def home(request):
     employe = getattr(request.user, 'employe', None)
@@ -64,38 +79,51 @@ def home(request):
     if role in ['CG', 'CD', 'DIR']:
         demandes_a_valider = [
             d for d in DemandeConge.objects.filter(niveau_validation=role, statue='EN_ATT_VA')
-            if employe.meme_equipe(d.name_employee)
+            if employe.meme_equipe(d.name_employee)       
         ]
+    notifications_recentes = Notification.objects.filter(
+    employe=employe 
+    ).order_by('-dateCreation', '-id')[:5]
+
+    demandes_a_valider = []
+    role = employe.get_role()
+    if role in ['CG', 'CD', 'DIR']:
+     demandes_a_valider = [
+        d for d in DemandeConge.objects.filter(niveau_validation=role, statue='EN_ATT_VA')
+        if employe.meme_equipe(d.name_employee)
+    ]
+    notifications_non_lues = Notification.objects.filter(employe=employe, lu=False).count()
 
     return render(request, 'conges/home.html', {
-        'solde': solde,
-        'demande_courante': demande_courante,
-        'remplacements_en_attente': remplacements_en_attente,
-        'notifications_recentes': notifications_recentes,
-        'demandes_a_valider': demandes_a_valider,
-    })
+    'solde': solde,
+    'demande_courante': demande_courante,
+    'remplacements_en_attente': remplacements_en_attente,
+    'notifications_recentes': notifications_recentes,
+    'demandes_a_valider': demandes_a_valider,
+    'notifications_non_lues': notifications_non_lues,
+})
+@login_required
+def nouvelle_demande(request, demande_id=None):
+    employe = getattr(request.user, 'employe', None)
+    if not employe:
+        messages.error(request, "Aucun profil employé associé à ce compte.")
+        return redirect('home')
 
-@login_required
-@role_required('CD')
-def test_chef(request):
-    return render(request,'conges/home.html')
-@login_required
-def nouvelle_demande(request):
+    instance = None
+    if demande_id:
+        instance = get_object_or_404(DemandeConge, id=demande_id, name_employee=employe, statue='BR')
+
     if request.method == 'POST':
-        form = DemandeCongeForm(request.POST, request.FILES)
+        form = DemandeCongeForm(request.POST, request.FILES, instance=instance, employe=employe)
         if form.is_valid():
             demande = form.save(commit=False)
-            employe = getattr(request.user, 'employe', None)
-            if not employe:
-                messages.error(request, "Aucun profil employé associé à ce compte.")
-                return redirect('home')
 
             conflits_remplacement = DemandeConge.objects.filter(
                 name_remplacent=employe,
                 statue__in=['VA', 'EN_ATT_VA', 'EN_ATT_RMP'],
                 dateDebut__lte=demande.dateFin,
                 dateFin__gte=demande.dateDebut
-            )
+            ).exclude(id=demande.id if instance else None)
             if conflits_remplacement.exists():
                 messages.error(request, "Vous êtes déjà remplaçant sur cette période.")
                 return render(request, 'conges/nouvelle_demande.html', {'form': form})
@@ -106,7 +134,7 @@ def nouvelle_demande(request):
                 demande_en_attente = DemandeConge.objects.filter(
                     name_employee=employe,
                     statue__in=['EN_ATT_RMP', 'EN_ATT_VA'],
-                ).exists()
+                ).exclude(id=demande.id if instance else None).exists()
 
                 if demande_en_attente:
                     messages.error(request, "Vous avez déjà une demande de congé en attente.")
@@ -117,24 +145,37 @@ def nouvelle_demande(request):
             jours = (demande.dateFin - demande.dateDebut).days
             demande.Numbrejours = jours
             demande.save()
-            demande.save()
 
-            Notification.objects.create(
-                employe=demande.name_remplacent,
-                demande=demande,
-                type_notif='DMD',
-                message=f"{employe.nom} vous a proposé comme remplaçant pour sa demande de congé.",
-            )
+            if not is_brouillon:
+                Notification.objects.create(
+                    employe=demande.name_remplacent,
+                    demande=demande,
+                    type_notif='DMD',
+                    message=f"{employe.nom} vous a proposé comme remplaçant pour sa demande de congé.",
+                )
 
             return redirect('mes_demandes')
     else:
-        form = DemandeCongeForm()
+        form = DemandeCongeForm(instance=instance, employe=employe)
+
     return render(request, 'conges/nouvelle_demande.html', {'form': form})
+
 @login_required
 def mes_demandes(request):
-    demandes = DemandeConge.objects.filter(name_employee=request.user.employe).order_by('dateCreation')
-    return render(request, 'conges/mes_demandes.html', {'demandes' : demandes})  
- 
+    employe = getattr(request.user, 'employe', None)
+    if not employe:
+        messages.error(request, "Aucun profil employé associé à ce compte.")
+        return redirect('home')
+
+    demandes = DemandeConge.objects.filter(name_employee=employe).order_by('-dateCreation')
+    return render(request, 'conges/mes_demandes.html', {'demandes': demandes})
+
+
+@login_required
+@role_required('CD')
+def test_chef(request):
+    return render(request,'conges/home.html')
+
 @login_required
 def demandes_remplacent(request):
   demandes=DemandeConge.objects.filter(
@@ -157,8 +198,8 @@ def accepter_remplacent(request, demande_id):
                 dateFin__gte=demande.dateDebut
             )
             if conflits.exists():
-                messages.error(request, "Vous n'êtes pas disponible sur cette période.")
-                return redirect('demandes_remplacent')
+             messages.error(request, "Vous n'êtes pas disponible sur cette période.")
+             return redirect('home')
 
             demande.statue = 'EN_ATT_VA'
             demandeur_role = demande.name_employee.get_role()
@@ -167,7 +208,7 @@ def accepter_remplacent(request, demande_id):
                 demande.niveau_validation = 'CD'
             elif demandeur_role == 'CD':
                 demande.niveau_validation = 'DIR'
-            elif demandeur_role == 'DIR':
+            elif demandeur_role == 'DIR' or demandeur_role == 'DRH':
                 demande.statue = 'VA'
             else:
                 demande.niveau_validation = 'CG'
@@ -283,21 +324,33 @@ def valider_demande(request, demande_id):
         return redirect('home')
 
     return render(request, 'conges/valider_demande.html', {'demande': demande})
-
 @login_required
 def mon_solde(request):
-    employe =getattr(request.user, 'employe', None)
-    if not employe :
-     messages.error(request, "Aucun profil employé associé à ce compte.")
-     return redirect('home')
+    employe = getattr(request.user, 'employe', None)
+    if not employe:
+        messages.error(request, "Aucun profil employé associé à ce compte.")
+        return redirect('home')
 
-    solde=getattr(employe, 'solde', None)
-    if not solde :
-      messages.error(request, "Aucun profil employé associé à ce compte.")
-      return redirect('home')
- 
-    return render(request, 'conges/mon_solde.html', {'solde': solde})
- 
+    solde = getattr(employe, 'solde', None)
+    if not solde:
+        messages.error(request, "Aucun profil employé associé à ce compte.")
+        return redirect('home')
+
+    solde_form = None
+    if employe.get_role() == 'DRH':
+        if request.method == 'POST':
+            solde_form = SoldeForm(request.POST)
+            if solde_form.is_valid():
+                solde_form.save()
+                messages.success(request, 'Solde assigné avec succès')
+                return redirect('mon_solde')
+        else:
+            solde_form = SoldeForm()
+
+    return render(request, 'conges/mon_solde.html', {
+        'solde': solde,
+        'solde_form': solde_form,
+    })
 @login_required
 def detail_demande(request, demande_id):
     demande = get_object_or_404(DemandeConge, id=demande_id, name_employee=request.user.employe)
@@ -349,31 +402,210 @@ def recherche_demandes(request):
         'date_fin': date_fin or '',
         'statut': statut or '',
         'type_conge': type_conge or '',
+    
     })
+ 
 @login_required
 @role_required('DRH')
 def gerer_employes(request):
+    form = NouvelEmployeForm()
+    direction_form = DirectionForm()
+    departement_form = DepartementForm()
+    groupe_form = GroupeForm()
+ 
     if request.method == 'POST':
-        form = NouvelEmployeForm(request.POST)
-        if form.is_valid():
-            user = User.objects.create_user(
-                username=form.cleaned_data['username'],
-                password=form.cleaned_data['password']
-            )
-
-            Employe.objects.create(
-                user=user,
-                nom=form.cleaned_data['nom'],
-                fonction=form.cleaned_data['fonction']
-            )
-
-            messages.success(request, 'employe créé avec success')
-            return redirect('gerer_employes')
-    else:
-        form = NouvelEmployeForm()
-
+        form_type = request.POST.get('form_type')
+ 
+        if form_type == 'employe':
+            form = NouvelEmployeForm(request.POST)
+            if form.is_valid():
+                user = User.objects.create_user(
+                    username=form.cleaned_data['username'],
+                    password=form.cleaned_data['password']
+                )
+                employe = Employe.objects.create(
+                    user=user,
+                    nom=form.cleaned_data['nom'],
+                    fonction=form.cleaned_data['fonction']
+                )
+                role_code = form.cleaned_data['role']
+                role_obj, _ = Role.objects.get_or_create(name=role_code)
+ 
+                groupe = form.cleaned_data.get('groupe')
+                departement = form.cleaned_data.get('departement')
+                direction = form.cleaned_data.get('direction')
+ 
+                if role_code in ['ES', 'CG']:
+                    departement = groupe.depratement if groupe else None
+                    direction = departement.direction if departement else None
+                elif role_code == 'CD':
+                    groupe = None
+                    direction = departement.direction if departement else None
+                elif role_code == 'DIR':
+                    groupe = None
+                    departement = None
+                elif role_code == 'DRH':
+                    groupe = None
+                    departement = None
+                    direction = None
+ 
+                EmployeRole.objects.create(
+                    employe=employe,
+                    role=role_obj,
+                    groupe=groupe,
+                    dep=departement,
+                    direction=direction,
+                )
+                messages.success(request, 'Employé créé avec succès')
+                return redirect('gerer_employes')
+ 
+        elif form_type == 'direction':
+            direction_form = DirectionForm(request.POST)
+            if direction_form.is_valid():
+                direction = direction_form.save()
+                if direction.directeur:
+                    sync_chef_role(direction.directeur, 'DIR', direction=direction)
+                messages.success(request, 'Direction créée avec succès')
+                return redirect('gerer_employes')
+ 
+        elif form_type == 'departement':
+            departement_form = DepartementForm(request.POST)
+            if departement_form.is_valid():
+                departement = departement_form.save()
+                if departement.Chef_de_departement:
+                    sync_chef_role(
+                        departement.Chef_de_departement,
+                        'CD',
+                        departement=departement,
+                        direction=departement.direction
+                    )
+                messages.success(request, 'Département créé avec succès')
+                return redirect('gerer_employes')
+ 
+        elif form_type == 'groupe':
+            groupe_form = GroupeForm(request.POST)
+            if groupe_form.is_valid():
+                groupe = groupe_form.save()
+                if groupe.Chef_de_groupe:
+                    sync_chef_role(
+                        groupe.Chef_de_groupe,
+                        'CG',
+                        groupe=groupe,
+                        departement=groupe.depratement,
+                        direction=groupe.depratement.direction
+                    )
+                messages.success(request, 'Groupe créé avec succès')
+                return redirect('gerer_employes')
+ 
+ 
+    return render(request, 'conges/gerer_employes.html', {
+        'form': form,
+        'direction_form': direction_form,
+        'departement_form': departement_form,
+        'groupe_form': groupe_form,
+    })
+@login_required
+@role_required('DRH')
+def liste_employes(request):
     employes = Employe.objects.all().order_by('nom')
-    return render(request, 'conges/gerer_employes.html', {'form': form, 'employes': employes})
+
+    nom = request.GET.get('nom')
+    direction_id = request.GET.get('direction')
+    departement_id = request.GET.get('departement')
+
+    if nom:
+        employes = employes.filter(nom__icontains=nom)
+
+    if direction_id:
+        employes = employes.filter(
+            Q(role__direction__id=direction_id) |
+            Q(role__dep__direction__id=direction_id) |
+            Q(role__groupe__depratement__direction__id=direction_id)
+        ).distinct()
+
+    if departement_id:
+        employes = employes.filter(
+            Q(role__dep__id=departement_id) |
+            Q(role__groupe__depratement__id=departement_id)
+        ).distinct()
+
+    return render(request, 'conges/liste_employes.html', {
+        'employes': employes,
+        'nom': nom or '',
+        'directions': Direction.objects.all(),
+        'departements': Departement.objects.all(),
+        'direction_id': direction_id or '',
+        'departement_id': departement_id or '',
+    })
+
+
+@login_required
+@role_required('DRH')
+def modifier_employe_role(request, employe_id):
+    employe = get_object_or_404(Employe, id=employe_id)
+    existing_role = employe.role.first()
+
+    if request.method == 'POST':
+        role_code = request.POST.get('role')
+        groupe_id = request.POST.get('groupe')
+        departement_id = request.POST.get('departement')
+        direction_id = request.POST.get('direction')
+
+        groupe = Groupe.objects.filter(id=groupe_id).first() if groupe_id else None
+        departement = Departement.objects.filter(id=departement_id).first() if departement_id else None
+        direction = Direction.objects.filter(id=direction_id).first() if direction_id else None
+
+        if role_code in ['ES', 'CG']:
+            departement = groupe.depratement if groupe else None
+            direction = departement.direction if departement else None
+        elif role_code == 'CD':
+            groupe = None
+            direction = departement.direction if departement else None
+        elif role_code == 'DIR':
+            groupe = None
+            departement = None
+        elif role_code == 'DRH':
+            groupe = None
+            departement = None
+            direction = None
+
+        sync_chef_role(employe, role_code, groupe=groupe, departement=departement, direction=direction)
+        sync_chef_role(employe, role_code, groupe=groupe, departement=departement, direction=direction)
+
+        if role_code == 'CG' and groupe:
+         groupe.Chef_de_groupe = employe
+         groupe.save()
+        elif role_code == 'CD' and departement:
+         departement.Chef_de_departement = employe
+         departement.save()
+        elif role_code == 'DIR' and direction:
+         direction.directeur = employe
+         direction.save()
+         messages.success(request, f"Rôle de {employe.nom} mis à jour.")
+         return redirect('liste_employes')
+
+    return render(request, 'conges/modifier_employe_role.html', {
+        'employe': employe,
+        'existing_role': existing_role,
+        'role_choices': Role.ROLE_CHOICES,
+        'groupes': Groupe.objects.all(),
+        'departements': Departement.objects.all(),
+        'directions': Direction.objects.all(),
+    })
+
+
+@login_required
+@role_required('DRH')
+def supprimer_employe(request, employe_id):
+    employe = get_object_or_404(Employe, id=employe_id)
+    if request.method == 'POST':
+        nom = employe.nom
+        if employe.user:
+            employe.user.delete()
+        employe.delete()
+        messages.success(request, f"{nom} a été supprimé.")
+        return redirect('liste_employes')
+    return render(request, 'conges/supprimer_employe.html', {'employe': employe})
 
 @login_required
 def rapport_solde_historique(request):
@@ -662,6 +894,9 @@ def drh_dashboard(request):
     )
     mois_labels = [item['mois'].strftime('%b %Y') for item in conges_par_mois_raw]
     mois_values = [item['total'] for item in conges_par_mois_raw]
+    effectif_total = employes.count()
+    en_conge_count = en_conge_aujourdhui.count()
+    taux_absence = round((en_conge_count / effectif_total) * 100, 1) if effectif_total else 0
 
     stats = {
         'effectif_total': employes.count(),
@@ -671,6 +906,8 @@ def drh_dashboard(request):
         'refusees': demandes.filter(statue='REF').count(),
         'jours_consommes_total': jours_consommes_total,
         'solde_global': solde_global,
+        'taux_absence': taux_absence,
+
     }
 
     return render(request, 'conges/drh_dashboard.html', {
@@ -683,6 +920,7 @@ def drh_dashboard(request):
         'type_values': json.dumps(type_values),
         'mois_labels': json.dumps(mois_labels),
         'mois_values': json.dumps(mois_values),
+        
     })
     
 @login_required
@@ -712,4 +950,5 @@ def mes_notifications(request):
         return redirect('home')
 
     notifications = Notification.objects.filter(employe=employe).order_by('-dateCreation', '-id')
+    notifications.filter(lu=False).update(lu=True)
     return render(request, 'conges/mes_notifications.html', {'notifications': notifications})

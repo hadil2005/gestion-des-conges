@@ -10,7 +10,10 @@
  
         <div class="flex items-start justify-between mb-8">
             <h1 class="text-2xl font-semibold">Mes notifications</h1>
-            <span class="text-sm text-neutral-400">{{ user.employe.nom }}</span>
+            <div class="flex items-center gap-3">
+    {% include 'conges/_notif_bell.html' %}
+    {% include 'conges/_employe_info.html' %}
+</div>
         </div>
  
         {% if messages %}
@@ -37,13 +40,8 @@
                         <td class="px-6 py-3">
                             <span class="text-xs font-medium px-2 py-0.5 rounded bg-neutral-100 text-neutral-400">{{ n.get_type_notif_display }}</span>
                         </td>
-                        <td class="px-6 py-3">
-                            {{ n.message }}
-                            {% if n.demande %}
-                            <a href="{% url 'detail_demande' n.demande.id %}" class="text-primary hover:text-primary-light font-medium ml-2">Voir la demande →</a>
-                            {% endif %}
-                        </td>
-                        <td class="px-6 py-3 text-right text-neutral-400">{{ n.dateCreation }}</td>
+                        <td class="px-6 py-3">{{ n.message }}</td>
+                        <td class="px-6 py-3 text-right text-neutral-400">{{ n.dateCreation|date:"d M, H:i" }}</td>
                     </tr>
                     {% endfor %}
                 </tbody>

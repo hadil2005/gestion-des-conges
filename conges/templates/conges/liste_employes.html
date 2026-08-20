@@ -1,0 +1,159 @@
+{% extends 'conges/base.html' %}
+{% block title %}Employés{% endblock %}
+ 
+{% block content %}
+<div class="flex min-h-screen">
+ 
+    {% include 'conges/_sidebar.html' %}
+ 
+    <main class="flex-1 px-8 py-8">
+ 
+        <div class="flex items-start justify-between mb-8">
+            <h1 class="text-2xl font-semibold">Employés</h1>
+            <div class="flex items-center gap-3">
+                {% include 'conges/_notif_bell.html' %}
+                <span class="text-sm text-neutral-400">{{ user.employe.nom }}</span>
+            </div>
+        </div>
+ 
+        {% if messages %}
+        <div class="mb-6 space-y-2">
+            {% for message in messages %}
+            <div class="bg-danger-pale border border-danger/20 text-danger text-sm rounded px-4 py-3">{{ message }}</div>
+            {% endfor %}
+        </div>
+        {% endif %}
+ 
+        <div class="mb-6">
+            <a href="{% url 'gerer_employes' %}"
+               class="inline-flex items-center gap-2 bg-primary hover:bg-primary-light text-white font-medium rounded px-5 py-2.5 text-sm transition-colors">
+                <svg xmlns="http://www.w3.org/2000/svg" class="w-4 h-4" viewBox="0 0 20 20" fill="currentColor">
+                    <path fill-rule="evenodd" d="M10 3a1 1 0 011 1v5h5a1 1 0 110 2h-5v5a1 1 0 11-2 0v-5H4a1 1 0 110-2h5V4a1 1 0 011-1z" clip-rule="evenodd" />
+                </svg>
+                Nouvel employé / groupe / département / direction
+            </a>
+        </div>
+ 
+       <form method="get" class="mb-6 flex flex-wrap items-end gap-4">
+    <div>
+        <label class="block text-sm font-medium mb-1.5">Nom</label>
+        <input type="text" name="nom" value="{{ nom }}" placeholder="Rechercher par nom..."
+               class="w-full border border-neutral-200 rounded px-3 py-2.5 text-sm focus:outline-none focus:border-primary focus:ring-1 focus:ring-primary">
+    </div>
+
+    <div>
+        <label class="block text-sm font-medium mb-1.5">Direction</label>
+        <select name="direction" id="filter-direction"
+                class="w-full border border-neutral-200 rounded px-3 py-2.5 text-sm focus:outline-none focus:border-primary focus:ring-1 focus:ring-primary">
+            <option value="">Toutes</option>
+            {% for d in directions %}
+            <option value="{{ d.id }}" {% if direction_id == d.id|stringformat:"s" %}selected{% endif %}>{{ d.nom_de_direction }}</option>
+            {% endfor %}
+        </select>
+    </div>
+
+    <div>
+        <label class="block text-sm font-medium mb-1.5">Département</label>
+        <select name="departement" id="filter-departement"
+                class="w-full border border-neutral-200 rounded px-3 py-2.5 text-sm focus:outline-none focus:border-primary focus:ring-1 focus:ring-primary">
+            <option value="">Tous</option>
+            {% for dep in departements %}
+            <option value="{{ dep.id }}" data-direction="{{ dep.direction_id }}"
+                    {% if departement_id == dep.id|stringformat:"s" %}selected{% endif %}>{{ dep.nom_de_departement }}</option>
+            {% endfor %}
+        </select>
+    </div>
+
+    <button type="submit"
+            class="bg-primary hover:bg-primary-light text-white font-medium rounded px-5 py-2.5 text-sm transition-colors">
+        Filtrer
+    </button>
+    <a href="{% url 'liste_employes' %}"
+       class="border border-neutral-200 hover:bg-neutral-50 text-[#111111] font-medium rounded px-5 py-2.5 text-sm transition-colors">
+        Réinitialiser
+    </a>
+</form>
+
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    const directionSelect = document.getElementById('filter-direction');
+    const departementSelect = document.getElementById('filter-departement');
+    const allDepOptions = Array.from(departementSelect.options);
+
+    function filterDepartements() {
+        const selectedDirection = directionSelect.value;
+        const currentDepValue = departementSelect.value;
+
+        departementSelect.innerHTML = '';
+        allDepOptions.forEach(function(opt) {
+            const optDirection = opt.getAttribute('data-direction');
+            if (opt.value === '' || !selectedDirection || optDirection === selectedDirection) {
+                departementSelect.appendChild(opt.cloneNode(true));
+            }
+        });
+
+        const stillExists = Array.from(departementSelect.options).some(o => o.value === currentDepValue);
+        departementSelect.value = stillExists ? currentDepValue : '';
+    }
+
+    directionSelect.addEventListener('change', function() {
+        departementSelect.value = '';
+        filterDepartements();
+    });
+
+    filterDepartements();
+});
+</script>
+ 
+        {% if employes %}
+        <div class="bg-white border border-neutral-200 rounded overflow-hidden">
+            <table class="w-full text-sm">
+                <thead>
+                    <tr class="text-left text-neutral-400 border-b border-neutral-100">
+                        <th class="px-6 py-3 font-medium">Nom</th>
+                        <th class="px-6 py-3 font-medium">Fonction</th>
+                        <th class="px-6 py-3 font-medium">Rôle</th>
+                        <th class="px-6 py-3 font-medium">Groupe / Département / Direction</th>
+                        <th class="px-6 py-3 font-medium text-right">Actions</th>
+                    </tr>
+                </thead>
+                <tbody class="divide-y divide-neutral-100">
+                    {% for e in employes %}
+                    <tr class="hover:bg-neutral-50">
+                        <td class="px-6 py-3">{{ e.nom }}</td>
+                        <td class="px-6 py-3">{{ e.fonction }}</td>
+                        <td class="px-6 py-3">
+                            {% with role=e.role.first %}
+                            {% if role %}
+                            <span class="text-xs font-medium px-2 py-0.5 rounded bg-neutral-100 text-neutral-400">{{ role.role.get_name_display }}</span>
+                            {% else %}
+                            <span class="text-xs text-neutral-400">—</span>
+                            {% endif %}
+                            {% endwith %}
+                        </td>
+                        <td class="px-6 py-3 text-neutral-400">
+                            {% with role=e.role.first %}
+                            {% if role.groupe %}{{ role.groupe.nom_de_groupe }}
+                            {% elif role.dep %}{{ role.dep.nom_de_departement }}
+                            {% elif role.direction %}{{ role.direction.nom_de_direction }}
+                            {% else %}—{% endif %}
+                            {% endwith %}
+                        </td>
+                        <td class="px-6 py-3 text-right space-x-3">
+                            <a href="{% url 'modifier_employe_role' e.id %}" class="text-primary hover:text-primary-light font-medium">Modifier</a>
+                            <a href="{% url 'supprimer_employe' e.id %}" class="text-danger hover:text-danger-light font-medium">Supprimer</a>
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+        {% else %}
+        <div class="bg-white border border-neutral-200 rounded px-6 py-12 text-center">
+            <p class="text-neutral-400 text-sm">Aucun employé.</p>
+        </div>
+        {% endif %}
+ 
+    </main>
+</div>
+{% endblock %}

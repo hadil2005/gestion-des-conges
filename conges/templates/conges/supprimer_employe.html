@@ -1,0 +1,42 @@
+{% extends 'conges/base.html' %}
+{% block title %}Supprimer {{ employe.nom }}{% endblock %}
+
+{% block content %}
+<div class="flex min-h-screen">
+
+    {% include 'conges/_sidebar.html' %}
+
+    <main class="flex-1 px-8 py-8">
+
+        <div class="flex items-start justify-between mb-8">
+            <h1 class="text-2xl font-semibold">Supprimer un employé</h1>
+            <div class="flex items-center gap-3">
+                {% include 'conges/_notif_bell.html' %}
+                <span class="text-sm text-neutral-400">{{ user.employe.nom }}</span>
+            </div>
+        </div>
+
+        <div class="bg-white border border-neutral-200 rounded p-6 max-w-xl">
+            <div class="bg-danger-pale border border-danger/20 text-danger text-sm rounded px-4 py-3 mb-6">
+                Cette action est irréversible.
+            </div>
+
+            <p class="mb-6">
+                Êtes-vous sûr de vouloir supprimer
+                <span class="font-medium">{{ employe.nom }}</span>
+                ({{ employe.fonction }}) ? Toutes ses données associées (demandes, notifications, historique) seront également supprimées.
+            </p>
+
+            <form method="post" class="flex items-center gap-3">
+                {% csrf_token %}
+                <button type="submit"
+                        class="bg-danger hover:bg-danger-light text-white font-medium rounded px-5 py-2.5 text-sm transition-colors">
+                    Confirmer la suppression
+                </button>
+                <a href="{% url 'liste_employes' %}" class="text-sm text-neutral-400 hover:text-[#111111]">Annuler</a>
+            </form>
+        </div>
+
+    </main>
+</div>
+{% endblock %}

@@ -10,7 +10,10 @@
  
         <div class="flex items-start justify-between mb-8">
             <h1 class="text-2xl font-semibold">Tableau de bord DRH</h1>
-            <span class="text-sm text-neutral-400">{{ user.employe.nom }}</span>
+            <div class="flex items-center gap-3">
+    {% include 'conges/_notif_bell.html' %}
+    {% include 'conges/_employe_info.html' %}
+</div>
         </div>
  
         {% if messages %}

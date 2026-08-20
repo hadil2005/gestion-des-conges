@@ -1,0 +1,48 @@
+<div class="relative inline-block">
+    <button onclick="document.getElementById('notif-dropdown').classList.toggle('hidden')"
+            class="relative flex items-center justify-center w-9 h-9 rounded hover:bg-neutral-100">
+<svg xmlns="http://www.w3.org/2000/svg" class="w-5 h-5 text-neutral-400" viewBox="0 0 20 20" fill="currentColor">            <path d="M10 2a6 6 0 00-6 6v3.586l-1.707 1.707A1 1 0 003 15h14a1 1 0 00.707-1.707L16 11.586V8a6 6 0 00-6-6zM8.5 17a1.5 1.5 0 003 0h-3z"/>
+        </svg>
+        {% if notifications_non_lues > 0 %}
+        <span class="absolute top-1 right-1 w-2 h-2 bg-primary rounded-full"></span>
+        {% endif %}
+    </button>
+
+    <div id="notif-dropdown" class="hidden absolute right-0 mt-2 w-80 bg-white border border-neutral-200 rounded shadow-lg z-50">
+        <div class="px-4 py-3 border-b border-neutral-100 flex items-center justify-between">
+            <span class="font-medium text-sm">Notifications</span>
+            <a href="{% url 'mes_notifications' %}" class="text-xs text-primary hover:text-primary-light">Voir tout</a>
+        </div>
+        <div class="max-h-80 overflow-y-auto">
+            {% if notifications_recentes_header %}
+            {% for n in notifications_recentes_header %}
+            <div class="px-4 py-3 border-b border-neutral-100 last:border-b-0 hover:bg-neutral-50">
+                <div class="flex items-center gap-2 mb-1">
+                    <span class="text-xs font-medium px-2 py-0.5 rounded bg-neutral-100 text-neutral-400">{{ n.get_type_notif_display }}</span>
+                    {% if not n.lu %}<span class="w-1.5 h-1.5 bg-primary rounded-full"></span>{% endif %}
+                </div>
+                <p class="text-sm">{{ n.message }}</p>
+                <p class="text-xs text-neutral-400 mt-1">{{ n.dateCreation|date:"d M, H:i" }}</p>
+            </div>
+            {% endfor %}
+            {% else %}
+            <p class="px-4 py-8 text-center text-sm text-neutral-400">Aucune notification.</p>
+            {% endif %}
+        </div>
+    </div>
+</div>
+
+<script>
+document.addEventListener('click', function(event) {
+    const dropdown = document.getElementById('notif-dropdown');
+    if (dropdown && !dropdown.classList.contains('hidden')) {
+        const bellButton = event.target.closest('button');
+        const isInsideDropdown = dropdown.contains(event.target);
+        if (!isInsideDropdown && (!bellButton || !bellButton.contains(dropdown.previousElementSibling))) {
+            if (!event.target.closest('.relative.inline-block')) {
+                dropdown.classList.add('hidden');
+            }
+        }
+    }
+});
+</script>

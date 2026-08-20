@@ -10,7 +10,10 @@
  
         <div class="flex items-start justify-between mb-8">
             <h1 class="text-2xl font-semibold">Mon Solde</h1>
-            <span class="text-sm text-neutral-400">{{ user.employe.nom }}</span>
+            <div class="flex items-center gap-3">
+    {% include 'conges/_notif_bell.html' %}
+    {% include 'conges/_employe_info.html' %}
+</div>
         </div>
  
         {% if messages %}
@@ -49,7 +52,47 @@
                 <path fill-rule="evenodd" d="M10 2a1 1 0 011 1v9.586l3.293-3.293a1 1 0 111.414 1.414l-5 5a1 1 0 01-1.414 0l-5-5a1 1 0 111.414-1.414L9 12.586V3a1 1 0 011-1z" clip-rule="evenodd" />
             </svg>
         </a>
- 
+ {% if solde_form %}
+<div class="mt-4 mb-6">
+    <button onclick="document.getElementById('assign-solde-modal').classList.remove('hidden')"
+            class="bg-primary hover:bg-primary-light text-white font-medium rounded px-5 py-2.5 text-sm transition-colors">
+        Assigner un solde
+    </button>
+</div>
+
+<div id="assign-solde-modal" class="hidden fixed inset-0 bg-black/40 flex items-center justify-center z-50">
+    <div class="bg-white border border-neutral-200 rounded p-6 max-w-xl w-full mx-4">
+        <div class="flex items-center justify-between mb-4">
+            <h2 class="font-medium">Assigner un solde</h2>
+            <button onclick="document.getElementById('assign-solde-modal').classList.add('hidden')"
+                    class="text-neutral-400 hover:text-[#111111]">✕</button>
+        </div>
+        <form method="post" class="space-y-4">
+            {% csrf_token %}
+            <div>
+                <label class="block text-sm font-medium mb-1.5">Employé</label>
+                {{ solde_form.employe }}
+            </div>
+            <div>
+                <label class="block text-sm font-medium mb-1.5">Solde annuel</label>
+                {{ solde_form.solde_annuel }}
+            </div>
+            <div>
+                <label class="block text-sm font-medium mb-1.5">Solde récupération</label>
+                {{ solde_form.solde_recuperation }}
+            </div>
+            <div>
+                <label class="block text-sm font-medium mb-1.5">Solde consommé</label>
+                {{ solde_form.solde_consomme }}
+            </div>
+            <button type="submit"
+                    class="bg-primary hover:bg-primary-light text-white font-medium rounded px-5 py-2.5 text-sm transition-colors">
+                Enregistrer
+            </button>
+        </form>
+    </div>
+</div>
+{% endif %}
     </main>
 </div>
 {% endblock %}

@@ -38,11 +38,43 @@ class Employe(models.Model):
      if moi.role.name == 'DIR':
         return moi.direction == lui.direction
      return False
+ 
+    def get_hierarchie(self):
+        employe_role = self.role.first()
+        if not employe_role:
+            return None
+
+        groupe = employe_role.groupe
+        departement = employe_role.dep or (groupe.depratement if groupe else None)
+        direction = employe_role.direction or (departement.direction if departement else None)
+
+        chef_groupe = None
+        if groupe:
+            cg_role = EmployeRole.objects.filter(role__name='CG', groupe=groupe).first()
+            chef_groupe = cg_role.employe if cg_role else None
+
+        chef_departement = None
+        if departement:
+            cd_role = EmployeRole.objects.filter(role__name='CD', dep=departement).first()
+            chef_departement = cd_role.employe if cd_role else None
+
+        chef_direction = None
+        if direction:
+            dir_role = EmployeRole.objects.filter(role__name='DIR', direction=direction).first()
+            chef_direction = dir_role.employe if dir_role else None
+
+        return {
+            'groupe': groupe,
+            'chef_groupe': chef_groupe,
+            'departement': departement,
+            'chef_departement': chef_departement,
+            'direction': direction,
+            'chef_direction': chef_direction,
+        }
 
     def get_role(self):
-        employe_role=self.role.first() # m3ntha jib the queryset mashi f container, gnr directly the row tae the infos tae employe_role
-        return employe_role.role.name if employe_role else None # ou hadil treturni name dyalou ou ida ma yexistich trj3 none
-    # hadi a function li jib role mel employee role
+        employe_role=self.role.first()
+        return employe_role.role.name if employe_role else None
     
     def __str__(self):
         return f"{self.nom}, {self.fonction}"
@@ -194,7 +226,7 @@ class DemandeConge(models.Model):
 
         
 class Notification(models.Model):
-    dateCreation = models.DateField(auto_now_add=True)
+    dateCreation = models.DateTimeField(auto_now_add=True)
     employe = models.ForeignKey(
         Employe,
         on_delete=models.CASCADE,
@@ -213,6 +245,8 @@ class Notification(models.Model):
     ]
     type_notif = models.CharField(max_length=10, choices=TYPE_NOTIF_CHOICES)
     message = models.CharField(max_length=255)
+    lu = models.BooleanField(default=False)
+
 
     def __str__(self):
         return f"Notification pour {self.employe} ({self.get_type_notif_display()})"

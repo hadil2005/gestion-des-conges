@@ -10,7 +10,10 @@
         <div class="flex items-start justify-between mb-8">
             <h1 class="text-2xl font-semibold">Mes demandes</h1>
             <div class="flex flex-col items-end gap-3">
-                <span class="text-sm text-neutral-400">{{ user.employe.nom }}</span>
+                <div class="flex items-center gap-3">
+    {% include 'conges/_notif_bell.html' %}
+    {% include 'conges/_employe_info.html' %}
+</div>
                 <a href="{% url 'nouvelle_demande' %}"
                    class="inline-flex items-center gap-2 bg-primary hover:bg-primary-light text-white font-medium rounded px-5 py-2.5 text-sm transition-colors">
                     <svg xmlns="http://www.w3.org/2000/svg" class="w-4 h-4" viewBox="0 0 20 20" fill="currentColor">
@@ -66,8 +69,12 @@
                             </span>
                         </td>
                         <td class="px-6 py-3 text-right">
-                            <a href="{% url 'detail_demande' demande.id %}" class="text-primary hover:text-primary-light font-medium">Détails</a>
-                        </td>
+                    {% if demande.statue == 'BR' %}
+                   <a href="{% url 'modifier_demande' demande.id %}" class="text-primary hover:text-primary-light font-medium">Modifier</a>
+                   {% else %}
+                   <a href="{% url 'detail_demande' demande.id %}" class="text-primary hover:text-primary-light font-medium">Détails</a>
+                   {% endif %}    
+                   </td>
                     </tr>
                     {% endfor %}
                 </tbody>

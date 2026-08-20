@@ -11,7 +11,7 @@
         <div class="flex items-start justify-between mb-8">
             <h1 class="text-2xl font-semibold">Missions</h1>
             <div class="flex flex-col items-end gap-3">
-                <span class="text-sm text-neutral-400">{{ user.employe.nom }}</span>
+                {% include 'conges/_employe_info.html' %}
                 <a href="{% url 'mission_creer' %}"
                    class="inline-flex items-center gap-2 bg-primary hover:bg-primary-light text-white font-medium rounded px-5 py-2.5 text-sm transition-colors">
                     <svg xmlns="http://www.w3.org/2000/svg" class="w-4 h-4" viewBox="0 0 20 20" fill="currentColor">

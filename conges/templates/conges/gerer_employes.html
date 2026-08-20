@@ -1,24 +1,177 @@
-<!DOCTYPE html>
-<html>
-<head><title>Gérer les employés</title></head>
-<body>
-<h2>Créer un employé</h2>
-
-{% if messages %}
-<ul>{% for message in messages %}<li>{{ message }}</li>{% endfor %}</ul>
-{% endif %}
-
-<form method="post">
-    {% csrf_token %}
-    {{ form.as_p }}
-    <button type="submit">Créer</button>
-</form>
-
-<h3>Employés existants</h3>
-<ul>
-{% for e in employes %}
-    <li>{{ e.nom }} — {{ e.fonction }}</li>
-{% endfor %}
-</ul>
-</body>
-</html>
+{% extends 'conges/base.html' %}
+{% block title %}Gérer les employés{% endblock %}
+ 
+{% block content %}
+<div class="flex min-h-screen">
+ 
+    {% include 'conges/_sidebar.html' %}
+ 
+    <main class="flex-1 px-8 py-8">
+ 
+        <div class="flex items-start justify-between mb-8">
+            <h1 class="text-2xl font-semibold">Gérer les employés</h1>
+            <div class="flex items-center gap-3">
+                {% include 'conges/_notif_bell.html' %}
+                <span class="text-sm text-neutral-400">{{ user.employe.nom }}</span>
+            </div>
+        </div>
+        <div class="mb-6">
+    <a href="{% url 'liste_employes' %}" class="text-sm text-primary hover:text-primary-light font-medium">→ Voir tous les employés</a>
+</div>
+ 
+        {% if messages %}
+        <div class="mb-6 space-y-2">
+            {% for message in messages %}
+            <div class="bg-danger-pale border border-danger/20 text-danger text-sm rounded px-4 py-3">{{ message }}</div>
+            {% endfor %}
+        </div>
+        {% endif %}
+ 
+        <!-- Section 1: Create employee -->
+        <h2 class="py-2 font-medium">Nouvel employé</h2>
+        <div class="bg-white border border-neutral-200 rounded p-6 max-w-xl mb-8">
+            <form method="post" class="space-y-5">
+                {% csrf_token %}
+                <input type="hidden" name="form_type" value="employe">
+ 
+                <div>
+                    <label class="block text-sm font-medium mb-1.5">Nom</label>
+                    {{ form.nom }}
+                </div>
+                <div>
+                    <label class="block text-sm font-medium mb-1.5">Fonction</label>
+                    {{ form.fonction }}
+                </div>
+                <div>
+                    <label class="block text-sm font-medium mb-1.5">Identifiant</label>
+                    {{ form.username }}
+                </div>
+                <div>
+                    <label class="block text-sm font-medium mb-1.5">Mot de passe</label>
+                    {{ form.password }}
+                </div>
+                <div>
+                    <label class="block text-sm font-medium mb-1.5">Rôle</label>
+                    {{ form.role }}
+                </div>
+ 
+                <div id="field-groupe">
+                    <label class="block text-sm font-medium mb-1.5">Groupe</label>
+                    {{ form.groupe }}
+                    <p class="text-xs text-neutral-400 mt-1">Groupe manquant ? Créez-le dans la section "Nouveau groupe" plus bas.</p>
+                </div>
+ 
+                <div id="field-departement" class="hidden">
+                    <label class="block text-sm font-medium mb-1.5">Département</label>
+                    {{ form.departement }}
+                    <p class="text-xs text-neutral-400 mt-1">Département manquant ? Créez-le dans la section "Nouveau département" plus bas.</p>
+                </div>
+ 
+                <div id="field-direction" class="hidden">
+                    <label class="block text-sm font-medium mb-1.5">Direction</label>
+                    {{ form.direction }}
+                    <p class="text-xs text-neutral-400 mt-1">Direction manquante ? Créez-la dans la section "Nouvelle direction" plus bas.</p>
+                </div>
+ 
+                <button type="submit"
+                        class="bg-primary hover:bg-primary-light text-white font-medium rounded px-5 py-2.5 text-sm transition-colors">
+                    Créer
+                </button>
+            </form>
+        </div>
+ 
+        <!-- Section 2: Create direction -->
+        <h2 class="py-2 font-medium">Nouvelle direction</h2>
+        <div class="bg-white border border-neutral-200 rounded p-6 max-w-xl mb-8">
+            <form method="post" class="space-y-4">
+                {% csrf_token %}
+                <input type="hidden" name="form_type" value="direction">
+                <div>
+                    <label class="block text-sm font-medium mb-1.5">Nom de la direction</label>
+                    {{ direction_form.nom_de_direction }}
+                </div>
+                <div>
+                    <label class="block text-sm font-medium mb-1.5">Directeur (optionnel)</label>
+                    {{ direction_form.directeur }}
+                </div>
+                <button type="submit"
+                        class="bg-primary hover:bg-primary-light text-white font-medium rounded px-5 py-2.5 text-sm transition-colors">
+                    Créer
+                </button>
+            </form>
+        </div>
+ 
+        <!-- Section 3: Create departement -->
+        <h2 class="py-2 font-medium">Nouveau département</h2>
+        <div class="bg-white border border-neutral-200 rounded p-6 max-w-xl mb-8">
+            <form method="post" class="space-y-4">
+                {% csrf_token %}
+                <input type="hidden" name="form_type" value="departement">
+                <div>
+                    <label class="block text-sm font-medium mb-1.5">Nom du département</label>
+                    {{ departement_form.nom_de_departement }}
+                </div>
+                <div>
+                    <label class="block text-sm font-medium mb-1.5">Direction</label>
+                    {{ departement_form.direction }}
+                </div>
+                <div>
+                    <label class="block text-sm font-medium mb-1.5">Chef de département (optionnel)</label>
+                    {{ departement_form.Chef_de_departement }}
+                </div>
+                <button type="submit"
+                        class="bg-primary hover:bg-primary-light text-white font-medium rounded px-5 py-2.5 text-sm transition-colors">
+                    Créer
+                </button>
+            </form>
+        </div>
+ 
+        <!-- Section 4: Create groupe -->
+        <h2 class="py-2 font-medium">Nouveau groupe</h2>
+        <div class="bg-white border border-neutral-200 rounded p-6 max-w-xl">
+            <form method="post" class="space-y-4">
+                {% csrf_token %}
+                <input type="hidden" name="form_type" value="groupe">
+                <div>
+                    <label class="block text-sm font-medium mb-1.5">Nom du groupe</label>
+                    {{ groupe_form.nom_de_groupe }}
+                </div>
+                <div>
+                    <label class="block text-sm font-medium mb-1.5">Département</label>
+                    {{ groupe_form.depratement }}
+                </div>
+                <div>
+                    <label class="block text-sm font-medium mb-1.5">Chef de groupe (optionnel)</label>
+                    {{ groupe_form.Chef_de_groupe }}
+                </div>
+                <button type="submit"
+                        class="bg-primary hover:bg-primary-light text-white font-medium rounded px-5 py-2.5 text-sm transition-colors">
+                    Créer
+                </button>
+            </form>
+        </div>
+ 
+    </main>
+</div>
+ 
+<script>
+function toggleScopeField() {
+    const role = document.getElementById('id_role').value;
+    document.getElementById('field-groupe').classList.add('hidden');
+    document.getElementById('field-departement').classList.add('hidden');
+    document.getElementById('field-direction').classList.add('hidden');
+ 
+    if (role === 'ES' || role === 'CG') {
+        document.getElementById('field-groupe').classList.remove('hidden');
+    } else if (role === 'CD') {
+        document.getElementById('field-departement').classList.remove('hidden');
+    } else if (role === 'DIR') {
+        document.getElementById('field-direction').classList.remove('hidden');
+    }
+}
+document.addEventListener('DOMContentLoaded', function() {
+    document.getElementById('id_role').addEventListener('change', toggleScopeField);
+    toggleScopeField();
+});
+</script>
+{% endblock %}

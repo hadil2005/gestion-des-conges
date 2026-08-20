@@ -42,7 +42,7 @@
 
         {% if user.employe.get_role == 'CG' or user.employe.get_role == 'CD' or user.employe.get_role == 'DIR' %}
         <a href="{% url 'demandes_a_valider' %}"
-           class="block px-3 py-2 rounded
+           class="block px-4 py-2 rounded
            {% if request.resolver_match.url_name == 'demandes_a_valider' %}bg-primary-pale/40 text-primary font-medium
            {% else %}text-neutral-400 hover:bg-neutral-50 hover:text-[#111111]{% endif %}">
             Demandes à valider
@@ -51,7 +51,7 @@
 
         {% if user.employe.get_role == 'DRH' %}
         <div class="pt-4 mt-4 border-t border-neutral-100 space-y-1">
-            <a href="{% url 'gerer_employes' %}"
+            <a href="{% url 'liste_employes' %}"
                class="block px-3 py-2 rounded
                {% if request.resolver_match.url_name == 'gerer_employes' %}bg-primary-pale/40 text-primary font-medium
                {% else %}text-neutral-400 hover:bg-neutral-50 hover:text-[#111111]{% endif %}">

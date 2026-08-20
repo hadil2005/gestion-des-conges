@@ -1,0 +1,47 @@
+<div class="relative inline-block">
+    <button onclick="document.getElementById('employe-info-dropdown').classList.toggle('hidden')"
+            class="text-sm text-neutral-400 hover:text-[#111111]">
+        {{ user.employe.nom }}
+    </button>
+
+    <div id="employe-info-dropdown" class="hidden absolute right-0 mt-2 w-72 bg-white border border-neutral-200 rounded shadow-lg z-50">
+        <div class="px-4 py-3 border-b border-neutral-100">
+            <p class="font-medium text-sm">{{ user.employe.nom }}</p>
+            <p class="text-xs text-neutral-400">{{ user.employe.fonction }}</p>
+        </div>
+        <div class="px-4 py-3 space-y-2 text-sm">
+            {% if hierarchie.groupe %}
+            <div>
+                <p class="text-xs text-neutral-400">Groupe</p>
+                <p>{{ hierarchie.groupe.nom_de_groupe }}{% if hierarchie.chef_groupe %} — {{ hierarchie.chef_groupe.nom }}{% endif %}</p>
+            </div>
+            {% endif %}
+            {% if hierarchie.departement %}
+            <div>
+                <p class="text-xs text-neutral-400">Département</p>
+                <p>{{ hierarchie.departement.nom_de_departement }}{% if hierarchie.chef_departement %} — {{ hierarchie.chef_departement.nom }}{% endif %}</p>
+            </div>
+            {% endif %}
+            {% if hierarchie.direction %}
+            <div>
+                <p class="text-xs text-neutral-400">Direction</p>
+                <p>{{ hierarchie.direction.nom_de_direction }}{% if hierarchie.chef_direction %} — {{ hierarchie.chef_direction.nom }}{% endif %}</p>
+            </div>
+            {% endif %}
+            {% if not hierarchie %}
+            <p class="text-neutral-400 text-xs">Aucune information disponible.</p>
+            {% endif %}
+        </div>
+    </div>
+</div>
+
+<script>
+document.addEventListener('click', function(event) {
+    const dropdown = document.getElementById('employe-info-dropdown');
+    if (dropdown && !dropdown.classList.contains('hidden')) {
+        if (!event.target.closest('.relative.inline-block')) {
+            dropdown.classList.add('hidden');
+        }
+    }
+});
+</script>
