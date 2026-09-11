@@ -5,7 +5,8 @@
 <div class="flex min-h-screen">
  
     {% include 'conges/_sidebar.html' %}
- 
+
+
     <main class="flex-1 px-8 py-8">
  
         <div class="flex items-start justify-between mb-8">
@@ -18,7 +19,58 @@
         <div class="mb-6">
     <a href="{% url 'liste_employes' %}" class="text-sm text-primary hover:text-primary-light font-medium">→ Voir tous les employés</a>
 </div>
- 
+
+
+{% if solde_form %}
+<div class="mt-4 mb-6">
+    <button onclick="document.getElementById('assign-solde-modal').classList.remove('hidden')"
+            class="bg-primary hover:bg-primary-light text-white font-medium rounded px-5 py-2.5 text-sm transition-colors">
+        Assigner un solde
+    </button>
+</div>
+
+<div id="assign-solde-modal" class="hidden fixed inset-0 bg-black/40 flex items-center justify-center z-50">
+    <div class="bg-white border border-neutral-200 rounded p-6 max-w-xl w-full mx-4">
+        <div class="flex items-center justify-between mb-4">
+            <h2 class="font-medium">Assigner un solde</h2>
+            <button onclick="document.getElementById('assign-solde-modal').classList.add('hidden')"
+                    class="text-neutral-400 hover:text-[#111111]">✕</button>
+        </div>
+        <form method="post" class="space-y-4">
+            {% csrf_token %}
+           
+    <input type="hidden" name="form_type" value="solde">
+
+    {% if solde_form.errors %}
+    <div class="bg-danger-pale border border-danger/20 text-danger text-sm rounded px-4 py-3">
+        {{ solde_form.errors }}
+    </div>
+    {% endif %}
+            <div>
+                <label class="block text-sm font-medium mb-1.5">Employé</label>
+                {{ solde_form.employe }}
+            </div>
+            <div>
+                <label class="block text-sm font-medium mb-1.5">Solde annuel</label>
+                {{ solde_form.solde_annuel }}
+            </div>
+            <div>
+                <label class="block text-sm font-medium mb-1.5">Solde récupération</label>
+                {{ solde_form.solde_recuperation }}
+            </div>
+            <div>
+                <label class="block text-sm font-medium mb-1.5">Solde consommé</label>
+                {{ solde_form.solde_consomme }}
+            </div>
+            <button type="submit"
+                    class="bg-primary hover:bg-primary-light text-white font-medium rounded px-5 py-2.5 text-sm transition-colors">
+                Enregistrer
+            </button>
+        </form>
+    </div>
+</div>
+{% endif %}
+
         {% if messages %}
         <div class="mb-6 space-y-2">
             {% for message in messages %}

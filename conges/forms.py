@@ -35,33 +35,30 @@ class DemandeCongeForm(forms.ModelForm):
             dep = employe_role.groupe.depratement
             return Employe.objects.filter(
                 role__groupe__depratement=dep
-            ).exclude(role__role__name='CD').exclude(id=employe.id)
+            ).exclude(id=employe.id)
 
         elif role == 'CG':
             if not employe_role.groupe:
                 return Employe.objects.none()
-            dep = employe_role.groupe.depratement
             return Employe.objects.filter(
-                role__groupe__depratement=dep
+                role__groupe=employe_role.groupe
             ).exclude(id=employe.id)
 
         elif role == 'CD':
-          if not employe_role.dep:
-            return Employe.objects.none()
-          direction = employe_role.dep.direction
-          return Employe.objects.filter(
-           role__role__name__in=['CG', 'DIR'],
-           role__dep__direction=direction
-          ).exclude(id=employe.id)
+            if not employe_role.dep:
+                return Employe.objects.none()
+            return Employe.objects.filter(
+                role__groupe__depratement=employe_role.dep
+            ).exclude(id=employe.id)
 
         elif role == 'DIR':
-          if not employe_role.direction:
-            return Employe.objects.none()
-        return Employe.objects.filter(
-          role__role__name='CD',
-          role__dep__direction=employe_role.direction
-    )
-       
+            if not employe_role.direction:
+                return Employe.objects.none()
+            return Employe.objects.filter(
+                role__role__name='CD',
+                role__dep__direction=employe_role.direction
+            ).exclude(id=employe.id)
+
         return Employe.objects.none()
     
 class NouvelEmployeForm(forms.Form):

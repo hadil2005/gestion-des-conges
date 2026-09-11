@@ -1,4 +1,5 @@
 from conges.forms import StyledLoginForm
+from conges import views
 
 """
 URL configuration for conges_project project.
@@ -22,10 +23,7 @@ from django.contrib.auth import views as auth_views
 
 urlpatterns = [
     path('admin/', admin.site.urls),
-    path('login/', auth_views.LoginView.as_view(
-    template_name='conges/login.html',
-    authentication_form=StyledLoginForm
-), name='login'),
+    path('login/', views.RoleBasedLoginView.as_view(), name='login'),
     path('logout/', auth_views.LogoutView.as_view(), name='logout'),
     path('', include('conges.urls')),
 ]

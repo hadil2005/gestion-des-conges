@@ -1,0 +1,82 @@
+{% extends 'conges/base.html' %}
+{% block title %}Directions{% endblock %}
+
+{% block content %}
+<div class="flex min-h-screen">
+
+    {% include 'conges/_sidebar.html' %}
+
+    <main class="flex-1 px-8 py-8">
+
+        <div class="flex items-start justify-between mb-8">
+            <h1 class="text-2xl font-semibold">Directions</h1>
+            <div class="flex items-center gap-3">
+                {% include 'conges/_notif_bell.html' %}
+                {% include 'conges/_employe_info.html' %}
+            </div>
+        </div>
+
+        {% if messages %}
+        <div class="mb-6 space-y-2">
+            {% for message in messages %}
+            <div class="bg-danger-pale border border-danger/20 text-danger text-sm rounded px-4 py-3">{{ message }}</div>
+            {% endfor %}
+        </div>
+        {% endif %}
+
+        <h2 class="py-2 font-medium">Nouvelle direction</h2>
+        <div class="bg-white border border-neutral-200 rounded p-6 max-w-xl mb-8">
+            <form method="post" class="space-y-5">
+                {% csrf_token %}
+                <div>
+                    <label class="block text-sm font-medium mb-1.5">Nom de la direction</label>
+                    {{ direction_form.nom_de_direction }}
+                </div>
+                <div>
+                    <label class="block text-sm font-medium mb-1.5">Directeur (optionnel)</label>
+                    {{ direction_form.directeur }}
+                </div>
+                <button type="submit"
+                        class="bg-primary hover:bg-primary-light text-white font-medium rounded px-5 py-2.5 text-sm transition-colors">
+                    Créer
+                </button>
+            </form>
+        </div>
+
+            <div class="bg-white border border-neutral-200 rounded overflow-hidden">
+            <table class="w-full text-sm">
+                <thead class="bg-neutral-50 text-neutral-500 text-left">
+                    <tr>
+                        <th class="px-4 py-3 font-medium">Nom</th>
+                        <th class="px-4 py-3 font-medium">Directeur</th>
+                        <th class="px-4 py-3 font-medium">Actions</th>
+                    </tr>
+                </thead>
+                <tbody class="divide-y divide-neutral-100">
+                    {% for direction in directions %}
+                    <tr>
+                        <td class="px-4 py-3">{{ direction.nom_de_direction }}</td>
+                        <td class="px-4 py-3">{{ direction.directeur.nom|default:"—" }}</td>
+                        <td class="px-4 py-3">
+                            <div class="flex items-center gap-3">
+                                <a href="{% url 'modifier_direction' direction.id %}" class="text-primary hover:underline">Modifier</a>
+                                <form method="post" action="{% url 'supprimer_direction' direction.id %}"
+                                      onsubmit="return confirm('Supprimer cette direction ?');">
+                                    {% csrf_token %}
+                                    <button type="submit" class="text-danger hover:underline">Supprimer</button>
+                                </form>
+                            </div>
+                        </td>
+                    </tr>
+                    {% empty %}
+                    <tr>
+                        <td colspan="3" class="px-4 py-6 text-center text-neutral-400">Aucune direction</td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+
+    </main>
+</div>
+{% endblock %}

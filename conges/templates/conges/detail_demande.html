@@ -50,12 +50,6 @@
                     <span class="text-neutral-400 text-sm">Remplaçant</span>
                     <span class="font-medium">{{ demande.name_remplacent.nom }}</span>
                 </div>
-                {% if demande.motif %}
-                <div class="flex items-center justify-between px-6 py-4">
-                    <span class="text-neutral-400 text-sm">Motif</span>
-                    <span class="font-medium">{{ demande.motif }}</span>
-                </div>
-                {% endif %}
                 {% if demande.statue == 'EN_ATT_VA' %}
                 <div class="flex items-center justify-between px-6 py-4">
                     <span class="text-neutral-400 text-sm">Niveau de validation</span>
@@ -70,21 +64,31 @@
                     </span>
                 </div>
                 {% endif %}
-                {% if demande.commentaire %}
-                <div class="px-6 py-4">
-                    <span class="text-neutral-400 text-sm block mb-1">Commentaire</span>
-                    <span class="font-medium">{{ demande.commentaire }}</span>
-                </div>
-                {% endif %}
-                {% if demande.piece_Joine %}
+                {% if demande.motif %}
                 <div class="flex items-center justify-between px-6 py-4">
-                    <span class="text-neutral-400 text-sm">Pièce jointe</span>
-                    <a href="{{ demande.piece_Joine.url }}" target="_blank" class="text-primary hover:text-primary-light font-medium">Voir le fichier</a>
+                    <span class="text-neutral-400 text-sm">Motif</span>
+                    <span class="font-medium">{{ demande.motif }}</span>
                 </div>
                 {% endif %}
+                               {% if demande.motif %}
+                <div class="flex items-center justify-between px-6 py-4">
+                    <span class="text-neutral-400 text-sm">Motif</span>
+                    <span class="font-medium">{{ demande.motif }}</span>
+                </div>
+                {% endif %}
+                {% with derniere_action=demande.historiques.last %}
+                {% if derniere_action.commentaire %}
+                <div class="flex items-center justify-between px-6 py-4">
+                    <span class="text-neutral-400 text-sm">Commentaire</span>
+                    <span class="font-medium">{{ derniere_action.commentaire }}</span>
+                </div>
+                {% endif %}
+                {% endwith %}
             </div>
  
         </div>
+
+        
  
         <div class="mt-6 max-w-2xl">
             <a href="{% url 'mes_demandes' %}" class="text-sm text-neutral-400 hover:text-[#111111]">← Retour à mes demandes</a>

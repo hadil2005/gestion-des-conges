@@ -171,9 +171,10 @@ class Solde(models.Model):
           on_delete=models.CASCADE,
           related_name='solde'
         )
-        solde_annuel = models.DecimalField(max_digits=6, decimal_places=2)
-        solde_recuperation = models.DecimalField(max_digits=6,decimal_places=2)
-        solde_consomme = models.DecimalField(max_digits=6, decimal_places=2)
+        solde_annuel = models.DecimalField(max_digits=10, decimal_places=2)
+        solde_recuperation = models.DecimalField(max_digits=10,decimal_places=2)
+        solde_consomme = models.DecimalField(max_digits=10, decimal_places=2)
+        jours_consommes = models.DecimalField(max_digits=6, decimal_places=0, default=0)
         @property
         def solde_actuel(self):
            return self.solde_annuel + self.solde_recuperation - self.solde_consomme
@@ -181,48 +182,7 @@ class Solde(models.Model):
         def __str__(self): 
          return f"Solde de {self.employe}"
   
-class DemandeConge(models.Model):
-        name_employee=models.ForeignKey(
-          Employe,
-          on_delete=models.CASCADE,
-          related_name='employe' 
-        )
-        name_remplacent=models.ForeignKey(
-            Employe,
-            on_delete=models.CASCADE,
-            related_name='remplacent'
-        )
-        dateCreation = models.DateField(auto_now_add=True)
-        dateDebut = models.DateField()
-        dateFin = models.DateField()
-        Numbrejours= models.DecimalField(max_digits=2, decimal_places=0)
-        piece_Joine=models.FileField(upload_to='justificatifs/', null=True, blank=True)
-        commentaire=models.TextField(blank=True)
-        TYPE_STATUE = [
-            ('VA', 'Validé'),
-            ('REF', 'Refusé'),
-            ('EN_ATT_RMP', 'En attente remplacent'),
-            ('EN_ATT_VA', 'En attente validation'),
-            ('BR', 'Brouillon'),
-            ('ANN', 'Annulé')   
-        ]
-        statue=models.CharField(max_length=10, choices=TYPE_STATUE)
-        NIVEAU_CHOICES = [ 
-           ('CG', 'Chef de Groupe'),
-           ('CD', 'Chef de Département'),
-           ('DIR', 'Directeur')       
-                          ]
-        niveau_validation=models.CharField(max_length=20, choices= NIVEAU_CHOICES, blank=True, null=True)
-        motif = models.CharField(max_length=255, blank=True)
-        TYPE_CONGE_CHOICES = [
-         ('1', 'Congé xxx'),
-         ('2', 'Congé maladie'),
-         ('3', 'Congé xx'),
-         ('AU', 'Autre'),
-]
-        type_conge = models.CharField(max_length=10, choices=TYPE_CONGE_CHOICES)
-        def __str__(self):
-         return f"Demande de {self.name_employee} ({self.get_statue_display()})"
+
 
         
 class Notification(models.Model):
@@ -252,19 +212,32 @@ class Notification(models.Model):
         return f"Notification pour {self.employe} ({self.get_type_notif_display()})"
             
 class Historique(models.Model):
-        demande = models.ForeignKey(
+    ACTION_CHOICES = [
+        ('VALIDATION', 'Validation de congé'),
+        ('REMPLACEMENT', 'Remplacement'),
+    ]
+    DECISION_CHOICES = [
+        ('ACCEPTE', 'Accepté'),
+        ('REFUSE', 'Refusé'),
+    ]
+
+    demande = models.ForeignKey(
         DemandeConge,
         on_delete=models.CASCADE,
         related_name='historiques'
     )
-        employe = models.ForeignKey(
+    employe = models.ForeignKey(
         Employe,
         on_delete=models.CASCADE,
         related_name='historiques'
     )
-        date_creation = models.DateField(auto_now_add=True)
-        def __str__(self):
-         return f"Historique de {self.demande} par {self.employe}"
+    type_action = models.CharField(max_length=20, choices=ACTION_CHOICES)
+    decision = models.CharField(max_length=10, choices=DECISION_CHOICES)
+    commentaire = models.CharField(max_length=255, blank=True)
+    date_creation = models.DateField(auto_now_add=True)
+
+    def __str__(self):
+        return f"Historique de {self.demande} par {self.employe}"
      
 
 
@@ -298,21 +271,16 @@ class Mission(models.Model):
         solde = getattr(self.employe, 'solde', None)
         if solde:
             if is_new:
-                solde.solde_recuperation += self.jours_recuperation
+                solde.solde_recuperation += self.jours_recuperation * 1000
                 solde.save()
             elif ancien_jours is not None and ancien_jours != self.jours_recuperation:
-                delta = self.jours_recuperation - ancien_jours
+                delta = (self.jours_recuperation - ancien_jours) * 1000
                 solde.solde_recuperation += delta
                 solde.save()
 
     def delete(self, *args, **kwargs):
          solde = getattr(self.employe, 'solde', None)
          if solde:
-            solde.solde_recuperation -= self.jours_recuperation
+            solde.solde_recuperation -= self.jours_recuperation * 1000
             solde.save()
-            super().delete(*args, **kwargs)
-
-    def __str__(self):
-         return f"Mission de {self.employe.nom} ({self.dateDebut} - {self.dateFin})"
-
-
+         super().delete(*args, **kwargs)

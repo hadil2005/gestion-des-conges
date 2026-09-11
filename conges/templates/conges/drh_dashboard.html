@@ -23,7 +23,37 @@
             {% endfor %}
         </div>
         {% endif %}
+<h2 class="py-2 text-lg font-semibold">Mon Solde</h2>
+        {% if solde %}
+<div class="grid grid-cols-4 gap-4 mb-6">
+    <div class="bg-primary-pale/30 border border-primary/20 rounded px-5 py-4">
+        <p class="text-xs text-neutral-400 mb-1">Solde Actuel</p>
+        <p class="text-xl font-semibold text-primary">{{ solde.solde_actuel }}</p>
+    </div>
+    <div class="bg-white border border-neutral-200 rounded px-5 py-4">
+        <p class="text-xs text-neutral-400 mb-1">Solde Annuel</p>
+        <p class="text-xl font-semibold">{{ solde.solde_annuel }}</p>
+    </div>
+    <div class="bg-white border border-neutral-200 rounded px-5 py-4">
+        <p class="text-xs text-neutral-400 mb-1">Solde Récupération</p>
+        <p class="text-xl font-semibold">{{ solde.solde_recuperation }}</p>
+    </div>
+    <div class="bg-white border border-neutral-200 rounded px-5 py-4">
+        <p class="text-xs text-neutral-400 mb-1">Solde Consommé</p>
+        <p class="text-xl font-semibold">{{ solde.solde_consomme }}</p>
+    </div>
+</div>
+<a href="{% url 'rapport_solde_historique' %}"
+   class="inline-flex items-center gap-2 mb-6 text-sm font-medium text-primary hover:text-primary-light transition-colors">
+    Télécharger mon rapport (PDF)
+    <svg xmlns="http://www.w3.org/2000/svg" class="w-4 h-4" viewBox="0 0 20 20" fill="currentColor">
+        <path fill-rule="evenodd" d="M10 2a1 1 0 011 1v9.586l3.293-3.293a1 1 0 111.414 1.414l-5 5a1 1 0 01-1.414 0l-5-5a1 1 0 111.414-1.414L9 12.586V3a1 1 0 011-1z" clip-rule="evenodd" />
+    </svg>
+</a>
+{% endif %}
  
+<h2 class="py-2 text-lg font-semibold">Statistiques</h2>
+
         <!-- Stat cards row 1 -->
 <div class="grid grid-cols-4 gap-4 mb-4">
     <div class="bg-white border border-neutral-200 rounded px-5 py-4">

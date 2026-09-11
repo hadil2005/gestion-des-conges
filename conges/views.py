@@ -1,8 +1,8 @@
 from django.shortcuts import render, redirect
 from django.contrib.auth.decorators import login_required
 from .decoraters import role_required
-from .forms import DemandeCongeForm, NouvelEmployeForm,MissionCreateForm, MissionCorrectionForm, DirectionForm, DepartementForm, GroupeForm, SoldeForm
-from .models import DemandeConge, Employe, Mission, Solde, Notification, Role, EmployeRole, Groupe
+from .forms import DemandeCongeForm, NouvelEmployeForm,MissionCreateForm, MissionCorrectionForm, DirectionForm, DepartementForm, GroupeForm, SoldeForm, StyledLoginForm
+from .models import DemandeConge, Employe, Mission, Solde, Notification, Role, EmployeRole, Groupe, Historique
 from .models import Departement, Direction
 from django.shortcuts import get_object_or_404
 from django.contrib import messages 
@@ -14,7 +14,56 @@ from django.db.models import Count
 from django.db.models.functions import TruncMonth
 from django.db.models import Q
 import json
+from django.contrib.auth.views import LoginView
+from django.urls import reverse
+import os
+from django.conf import settings
+from reportlab.lib.pagesizes import A4
+from reportlab.lib.units import cm
+from reportlab.lib import colors
+from reportlab.lib.styles import getSampleStyleSheet, ParagraphStyle
+from reportlab.lib.enums import TA_CENTER
+from reportlab.platypus import SimpleDocTemplate, Table, TableStyle, Paragraph, Spacer, Image
+from reportlab.lib.enums import TA_CENTER, TA_RIGHT
 
+LOGO_PATH = os.path.join(settings.BASE_DIR, 'conges', 'static', 'image', 'sonatrach.png')
+
+def _header_table(title_text):
+    """Builds a 3-column header: logo top-left | title centered on the page | invisible spacer."""
+    styles = getSampleStyleSheet()
+    title_style = ParagraphStyle(
+        'ReportTitle', parent=styles['Title'],
+        fontSize=16, alignment=TA_CENTER, textColor=colors.HexColor('#111111'),
+    )
+ 
+    if os.path.exists(LOGO_PATH):
+        logo = Image(LOGO_PATH, width=2.2 * cm, height=2.2 * cm)
+    else:
+        logo = Paragraph(f"[Logo introuvable: {LOGO_PATH}]", styles['Normal'])
+ 
+    header = Table(
+        [[logo, Paragraph(title_text, title_style), ""]],
+        colWidths=[3 * cm, 11.5 * cm, 3 * cm],
+    )
+    header.setStyle(TableStyle([
+        ('VALIGN', (0, 0), (-1, -1), 'MIDDLE'),
+        ('ALIGN', (0, 0), (0, 0), 'LEFT'),
+        ('ALIGN', (1, 0), (1, 0), 'CENTER'),
+        ('LEFTPADDING', (0, 0), (-1, -1), 0),
+    ]))
+    return header
+
+class RoleBasedLoginView(LoginView):
+    template_name = 'conges/login.html'
+    authentication_form = StyledLoginForm
+
+    def get_success_url(self):
+        employe = getattr(self.request.user, 'employe', None)
+        if employe:
+            role = employe.get_role()
+            if role in ['DRH', 'CD', 'DIR']:
+                return reverse('dashboard')
+        return reverse('home')
 
 def get_validateur(employe, niveau):
     """Resolve the actual chef Employe for a given employee's team at a given niveau."""
@@ -58,7 +107,22 @@ def home(request):
         messages.error(request, "Aucun profil employé associé à ce compte.")
         return redirect('login')
 
+    if employe.get_role() in ['DRH', 'CD', 'DIR']:
+        return redirect('dashboard')
+
+
     solde = getattr(employe, 'solde', None)
+
+    solde_form = None
+    if employe.get_role() == 'DRH':
+        if request.method == 'POST':
+            solde_form = SoldeForm(request.POST)
+            if solde_form.is_valid():
+                solde_form.save()
+                messages.success(request, 'Solde assigné avec succès')
+                return redirect('home')
+        else:
+            solde_form = SoldeForm()
 
     demande_courante = DemandeConge.objects.filter(
         name_employee=employe,
@@ -76,32 +140,20 @@ def home(request):
 
     demandes_a_valider = []
     role = employe.get_role()
-    if role in ['CG', 'CD', 'DIR']:
+    if role in ['ES','CG', 'CD', 'DIR']:
         demandes_a_valider = [
             d for d in DemandeConge.objects.filter(niveau_validation=role, statue='EN_ATT_VA')
-            if employe.meme_equipe(d.name_employee)       
+            if employe.meme_equipe(d.name_employee)
         ]
-    notifications_recentes = Notification.objects.filter(
-    employe=employe 
-    ).order_by('-dateCreation', '-id')[:5]
-
-    demandes_a_valider = []
-    role = employe.get_role()
-    if role in ['CG', 'CD', 'DIR']:
-     demandes_a_valider = [
-        d for d in DemandeConge.objects.filter(niveau_validation=role, statue='EN_ATT_VA')
-        if employe.meme_equipe(d.name_employee)
-    ]
-    notifications_non_lues = Notification.objects.filter(employe=employe, lu=False).count()
 
     return render(request, 'conges/home.html', {
-    'solde': solde,
-    'demande_courante': demande_courante,
-    'remplacements_en_attente': remplacements_en_attente,
-    'notifications_recentes': notifications_recentes,
-    'demandes_a_valider': demandes_a_valider,
-    'notifications_non_lues': notifications_non_lues,
-})
+        'solde': solde,
+        'solde_form': solde_form,
+        'demande_courante': demande_courante,
+        'remplacements_en_attente': remplacements_en_attente,
+        'notifications_recentes': notifications_recentes,
+        'demandes_a_valider': demandes_a_valider,
+    })
 @login_required
 def nouvelle_demande(request, demande_id=None):
     employe = getattr(request.user, 'employe', None)
@@ -140,6 +192,11 @@ def nouvelle_demande(request, demande_id=None):
                     messages.error(request, "Vous avez déjà une demande de congé en attente.")
                     return render(request, 'conges/nouvelle_demande.html', {'form': form})
 
+                solde = getattr(employe, 'solde', None)
+                if solde and solde.jours_consommes >= 30:
+                    messages.error(request, "Vous avez déjà consommé vos 30 jours de congé pour l'année.")
+                    return render(request, 'conges/nouvelle_demande.html', {'form': form})
+
             demande.name_employee = employe
             demande.statue = 'BR' if is_brouillon else 'EN_ATT_RMP'
             jours = (demande.dateFin - demande.dateDebut).days
@@ -159,7 +216,6 @@ def nouvelle_demande(request, demande_id=None):
         form = DemandeCongeForm(instance=instance, employe=employe)
 
     return render(request, 'conges/nouvelle_demande.html', {'form': form})
-
 @login_required
 def mes_demandes(request):
     employe = getattr(request.user, 'employe', None)
@@ -168,6 +224,9 @@ def mes_demandes(request):
         return redirect('home')
 
     demandes = DemandeConge.objects.filter(name_employee=employe).order_by('-dateCreation')
+
+    Notification.objects.filter(employe=employe, type_notif='UPD', lu=False).update(lu=True)
+
     return render(request, 'conges/mes_demandes.html', {'demandes': demandes})
 
 
@@ -187,9 +246,10 @@ def demandes_remplacent(request):
 @login_required
 def accepter_remplacent(request, demande_id):
     demande = get_object_or_404(DemandeConge, id=demande_id, name_remplacent=request.user.employe)
-    if request.method == 'POST' :
+    if request.method == 'POST':
         action = request.POST.get('action')
-        
+        commentaire = request.POST.get('commentaire', '')
+
         if action == 'accepter':
             conflits = DemandeConge.objects.filter(
                 name_employee=request.user.employe,
@@ -198,8 +258,8 @@ def accepter_remplacent(request, demande_id):
                 dateFin__gte=demande.dateDebut
             )
             if conflits.exists():
-             messages.error(request, "Vous n'êtes pas disponible sur cette période.")
-             return redirect('home')
+                messages.error(request, "Vous n'êtes pas disponible sur cette période.")
+                return redirect('home')
 
             demande.statue = 'EN_ATT_VA'
             demandeur_role = demande.name_employee.get_role()
@@ -210,11 +270,22 @@ def accepter_remplacent(request, demande_id):
                 demande.niveau_validation = 'DIR'
             elif demandeur_role == 'DIR' or demandeur_role == 'DRH':
                 demande.statue = 'VA'
+                solde = demande.name_employee.solde
+                solde.solde_consomme += demande.Numbrejours * 1000
+                solde.jours_consommes += demande.Numbrejours
+                solde.save()
             else:
                 demande.niveau_validation = 'CG'
 
             demande.save()
 
+            Historique.objects.create(
+                employe=request.user.employe,
+                demande=demande,
+                type_action='REMPLACEMENT',
+                decision='ACCEPTE',
+                commentaire=commentaire,
+            )
             Notification.objects.create(
                 employe=demande.name_employee,
                 demande=demande,
@@ -235,20 +306,26 @@ def accepter_remplacent(request, demande_id):
         elif action == 'refuser':
             demande.statue = 'REF'
             demande.save()
+            Historique.objects.create(
+                employe=request.user.employe,
+                demande=demande,
+                type_action='REMPLACEMENT',
+                decision='REFUSE',
+                commentaire=commentaire,
+            )
             Notification.objects.create(
                 employe=demande.name_employee,
                 demande=demande,
                 type_notif='UPD',
                 message=f"{demande.name_remplacent.nom} a refusé d'être votre remplaçant.",
             )
-            
-        demande.save()
+
         return redirect('home')
-    return render(request, 'conges/accepter_remplacent.html', {'demande': demande})  
-  
+
+    return render(request, 'conges/accepter_remplacent.html', {'demande': demande})
 
 @login_required
-@role_required('CG','CD','DIR')
+@role_required('ES','CG','CD','DIR')
 def demandes_a_valider(request):
     chef = request.user.employe
     role = chef.get_role()
@@ -257,8 +334,16 @@ def demandes_a_valider(request):
         niveau_validation=role
     ).order_by('dateCreation')
     demandes = [demande for demande in demandes if chef.meme_equipe(demande.name_employee)]
-    return render(request, 'conges/demandes_a_valider.html', {'demandes': demandes}) 
-    
+
+    remplacements_en_attente = DemandeConge.objects.filter(
+        name_remplacent=chef,
+        statue='EN_ATT_RMP'
+    ).order_by('dateCreation')
+
+    return render(request, 'conges/demandes_a_valider.html', {
+        'demandes': demandes,
+        'remplacements_en_attente': remplacements_en_attente,
+    })
 @login_required
 @role_required('CG', 'CD', 'DIR')
 def valider_demande(request, demande_id):
@@ -283,10 +368,19 @@ def valider_demande(request, demande_id):
             elif demande.niveau_validation == 'DIR':
                 demande.statue = 'VA'
                 solde = demande.name_employee.solde
-                solde.solde_consomme += demande.Numbrejours
+                solde.solde_consomme += demande.Numbrejours * 1000
+                solde.jours_consommes += demande.Numbrejours  
                 solde.save()
 
             demande.save()
+            
+            Historique.objects.create(
+                employe=chef,
+                demande=demande,
+                type_action='VALIDATION',
+                decision='ACCEPTE',
+                commentaire=commentaire,
+            )
 
             if demande.statue == 'VA':
                 Notification.objects.create(
@@ -320,37 +414,17 @@ def valider_demande(request, demande_id):
                 type_notif='UPD',
                 message=f"Votre demande de congé a été refusée par {role.label}.",
             )
+            Historique.objects.create(
+                employe=chef,
+                demande=demande,
+                type_action='VALIDATION',
+                decision='REFUSE',
+                commentaire=commentaire,
+            )
 
-        return redirect('home')
+        return redirect('demandes_a_valider')
 
     return render(request, 'conges/valider_demande.html', {'demande': demande})
-@login_required
-def mon_solde(request):
-    employe = getattr(request.user, 'employe', None)
-    if not employe:
-        messages.error(request, "Aucun profil employé associé à ce compte.")
-        return redirect('home')
-
-    solde = getattr(employe, 'solde', None)
-    if not solde:
-        messages.error(request, "Aucun profil employé associé à ce compte.")
-        return redirect('home')
-
-    solde_form = None
-    if employe.get_role() == 'DRH':
-        if request.method == 'POST':
-            solde_form = SoldeForm(request.POST)
-            if solde_form.is_valid():
-                solde_form.save()
-                messages.success(request, 'Solde assigné avec succès')
-                return redirect('mon_solde')
-        else:
-            solde_form = SoldeForm()
-
-    return render(request, 'conges/mon_solde.html', {
-        'solde': solde,
-        'solde_form': solde_form,
-    })
 @login_required
 def detail_demande(request, demande_id):
     demande = get_object_or_404(DemandeConge, id=demande_id, name_employee=request.user.employe)
@@ -409,9 +483,8 @@ def recherche_demandes(request):
 @role_required('DRH')
 def gerer_employes(request):
     form = NouvelEmployeForm()
-    direction_form = DirectionForm()
-    departement_form = DepartementForm()
-    groupe_form = GroupeForm()
+    solde_form = SoldeForm()
+    
  
     if request.method == 'POST':
         form_type = request.POST.get('form_type')
@@ -458,56 +531,24 @@ def gerer_employes(request):
                 )
                 messages.success(request, 'Employé créé avec succès')
                 return redirect('gerer_employes')
- 
-        elif form_type == 'direction':
-            direction_form = DirectionForm(request.POST)
-            if direction_form.is_valid():
-                direction = direction_form.save()
-                if direction.directeur:
-                    sync_chef_role(direction.directeur, 'DIR', direction=direction)
-                messages.success(request, 'Direction créée avec succès')
-                return redirect('gerer_employes')
- 
-        elif form_type == 'departement':
-            departement_form = DepartementForm(request.POST)
-            if departement_form.is_valid():
-                departement = departement_form.save()
-                if departement.Chef_de_departement:
-                    sync_chef_role(
-                        departement.Chef_de_departement,
-                        'CD',
-                        departement=departement,
-                        direction=departement.direction
-                    )
-                messages.success(request, 'Département créé avec succès')
-                return redirect('gerer_employes')
- 
-        elif form_type == 'groupe':
-            groupe_form = GroupeForm(request.POST)
-            if groupe_form.is_valid():
-                groupe = groupe_form.save()
-                if groupe.Chef_de_groupe:
-                    sync_chef_role(
-                        groupe.Chef_de_groupe,
-                        'CG',
-                        groupe=groupe,
-                        departement=groupe.depratement,
-                        direction=groupe.depratement.direction
-                    )
-                messages.success(request, 'Groupe créé avec succès')
-                return redirect('gerer_employes')
+
+        elif form_type == 'solde':
+          solde_form = SoldeForm(request.POST)
+          if solde_form.is_valid():
+            solde_form.save()
+            messages.success(request, 'Solde assigné avec succès')
+            return redirect('gerer_employes')     
  
  
     return render(request, 'conges/gerer_employes.html', {
         'form': form,
-        'direction_form': direction_form,
-        'departement_form': departement_form,
-        'groupe_form': groupe_form,
+        'solde_form': solde_form,
+
     })
 @login_required
 @role_required('DRH')
 def liste_employes(request):
-    employes = Employe.objects.all().order_by('nom')
+    employes = Employe.objects.select_related('solde').all().order_by('nom')
 
     nom = request.GET.get('nom')
     direction_id = request.GET.get('direction')
@@ -537,8 +578,6 @@ def liste_employes(request):
         'direction_id': direction_id or '',
         'departement_id': departement_id or '',
     })
-
-
 @login_required
 @role_required('DRH')
 def modifier_employe_role(request, employe_id):
@@ -546,6 +585,10 @@ def modifier_employe_role(request, employe_id):
     existing_role = employe.role.first()
 
     if request.method == 'POST':
+        employe.nom = request.POST.get('nom', employe.nom)
+        employe.fonction = request.POST.get('fonction', employe.fonction)
+        employe.save()
+
         role_code = request.POST.get('role')
         groupe_id = request.POST.get('groupe')
         departement_id = request.POST.get('departement')
@@ -570,19 +613,19 @@ def modifier_employe_role(request, employe_id):
             direction = None
 
         sync_chef_role(employe, role_code, groupe=groupe, departement=departement, direction=direction)
-        sync_chef_role(employe, role_code, groupe=groupe, departement=departement, direction=direction)
 
         if role_code == 'CG' and groupe:
-         groupe.Chef_de_groupe = employe
-         groupe.save()
+            groupe.Chef_de_groupe = employe
+            groupe.save()
         elif role_code == 'CD' and departement:
-         departement.Chef_de_departement = employe
-         departement.save()
+            departement.Chef_de_departement = employe
+            departement.save()
         elif role_code == 'DIR' and direction:
-         direction.directeur = employe
-         direction.save()
-         messages.success(request, f"Rôle de {employe.nom} mis à jour.")
-         return redirect('liste_employes')
+            direction.directeur = employe
+            direction.save()
+
+        messages.success(request, f"{employe.nom} a été mis à jour.")
+        return redirect('liste_employes')
 
     return render(request, 'conges/modifier_employe_role.html', {
         'employe': employe,
@@ -607,6 +650,7 @@ def supprimer_employe(request, employe_id):
         return redirect('liste_employes')
     return render(request, 'conges/supprimer_employe.html', {'employe': employe})
 
+
 @login_required
 def rapport_solde_historique(request):
     employe = getattr(request.user, 'employe', None)
@@ -615,97 +659,244 @@ def rapport_solde_historique(request):
         return redirect('home')
 
     solde = getattr(employe, 'solde', None)
-    demandes = DemandeConge.objects.filter(name_employee=employe).order_by('dateCreation')
-
+    demandes = DemandeConge.objects.filter(name_employee=employe, statue='VA').order_by('dateCreation')  
+    hierarchie = employe.get_hierarchie()
     response = HttpResponse(content_type='application/pdf')
     response['Content-Disposition'] = f'attachment; filename="rapport_{employe.id}.pdf"'
 
-    p = canvas.Canvas(response)
-    y = 800
+    doc = SimpleDocTemplate(
+        response, pagesize=A4,
+        topMargin=1.5 * cm, bottomMargin=1.5 * cm,
+        leftMargin=1.5 * cm, rightMargin=1.5 * cm,
+    )
+    styles = getSampleStyleSheet()
+    story = []
 
-    p.drawString(100, y, f"Rapport de {employe.nom}")
-    y -= 30
+    story.append(_header_table("Rapport de solde et historique"))
+
+    date_style = ParagraphStyle(
+        'DateExport', parent=styles['Normal'], fontSize=12,
+        textColor=colors.black, alignment=TA_RIGHT,
+    )
+    story.append(Paragraph(f"{timezone.localdate().strftime('%d/%m/%Y')}", date_style))
+    story.append(Spacer(1, 0.5 * cm))
+
+    grey_style = ParagraphStyle(
+        'Meta', parent=styles['Normal'], fontSize=12,
+        textColor=colors.black,
+    )
+    section_style = ParagraphStyle(
+        'Section', parent=styles['Heading2'], fontSize=12,
+        textColor=colors.black, spaceAfter=8,
+    )
+
+    groupe_nom = hierarchie['groupe'].nom_de_groupe if hierarchie and hierarchie['groupe'] else None
+    departement_nom = hierarchie['departement'].nom_de_departement if hierarchie and hierarchie['departement'] else None
+    direction_nom = hierarchie['direction'].nom_de_direction if hierarchie and hierarchie['direction'] else None
+
+    story.append(Paragraph(f"{employe.nom} — {employe.fonction}", grey_style))
+
+    if groupe_nom or departement_nom:
+        parts = []
+        if groupe_nom:
+            parts.append(groupe_nom)
+        if departement_nom:
+            parts.append(departement_nom)
+        story.append(Paragraph(" / ".join(parts), grey_style))
+
+    if direction_nom:
+        story.append(Paragraph(direction_nom, grey_style))
+
+    story.append(Spacer(1, 0.8 * cm))
+
+    story.append(Paragraph("Solde", section_style))
 
     if solde:
-        p.drawString(100, y, f"Solde annuel: {solde.solde_annuel}")
-        y -= 20
-        p.drawString(100, y, f"Solde récupération: {solde.solde_recuperation}")
-        y -= 20
-        p.drawString(100, y, f"Solde consommé: {solde.solde_consomme}")
-        y -= 20
-        p.drawString(100, y, f"Solde actuel: {solde.solde_actuel}")
-        y -= 40
+        solde_data = [
+            ["Solde annuel", "Solde récupération", "Jours consommés", "Solde actuel"],
+            [
+                f"{solde.solde_annuel:g}",
+                f"{solde.solde_recuperation:g}",
+                f"{solde.jours_consommes:g}",
+                f"{solde.solde_actuel:g}",
+            ],
+        ]
+        solde_table = Table(solde_data, colWidths=[4 * cm, 4.5 * cm, 4 * cm, 4 * cm])
+        solde_table.setStyle(TableStyle([
+            ('BACKGROUND', (0, 0), (-1, 0), colors.HexColor("#F5821F")),
+            ('TEXTCOLOR', (0, 0), (-1, 0), colors.white),
+            ('FONTNAME', (0, 0), (-1, 0), 'Helvetica-Bold'),
+            ('FONTSIZE', (0, 0), (-1, 0), 9),
+            ('ALIGN', (0, 0), (-1, -1), 'CENTER'),
+            ('BACKGROUND', (0, 1), (-1, -1), colors.white),
+            ('GRID', (0, 0), (-1, -1), 0.5, colors.HexColor('#DDDDDD')),
+            ('FONTSIZE', (0, 1), (-1, -1), 9),
+            ('TOPPADDING', (0, 0), (-1, -1), 6),
+            ('BOTTOMPADDING', (0, 0), (-1, -1), 6),
+            ('LEFTPADDING', (0, 0), (-1, -1), 0),
+        ]))
+        story.append(solde_table)
     else:
-        p.drawString(100, y, "Aucun solde défini.")
-        y -= 40
+        story.append(Paragraph("Aucun solde défini.", styles['Normal']))
 
-    p.drawString(100, y, "Historique des demandes:")
-    y -= 25
+    story.append(Spacer(1, 0.8 * cm))
+    story.append(Paragraph("Historique des demandes", section_style))
 
     if not demandes:
-     p.drawString(100, y, "Aucune demande de congé enregistrée.")
-     y -= 20
+        story.append(Paragraph("Aucune demande de congé enregistrée.", styles['Normal']))
     else:
-     for demande in demandes:
-        ligne = f"{demande.dateDebut} au {demande.dateFin} - {demande.get_statue_display()}"
-        p.drawString(100, y, ligne)
-        y -= 20
-        if y < 50:
-            p.showPage()
-            y = 800
+        hist_data = [["Date début", "Date fin", "Jours", "Statut"]]
+        for demande in demandes:
+            hist_data.append([
+                demande.dateDebut.strftime('%d/%m/%Y'),
+                demande.dateFin.strftime('%d/%m/%Y'),
+                str(demande.Numbrejours),
+                demande.get_statue_display(),
+            ])
 
-    p.showPage()
-    p.save()
+        hist_table = Table(hist_data, colWidths=[4 * cm, 4 * cm, 3 * cm, 5.5 * cm], repeatRows=1)
+        hist_table.setStyle(TableStyle([
+            ('BACKGROUND', (0, 0), (-1, 0), colors.HexColor("#F5821F")),
+            ('TEXTCOLOR', (0, 0), (-1, 0), colors.white),
+            ('FONTNAME', (0, 0), (-1, 0), 'Helvetica-Bold'),
+            ('FONTSIZE', (0, 0), (-1, 0), 9),
+            ('ALIGN', (0, 0), (-1, -1), 'CENTER'),
+            ('BACKGROUND', (0, 1), (-1, -1), colors.white),
+            ('GRID', (0, 0), (-1, -1), 0.5, colors.HexColor('#DDDDDD')),
+            ('FONTSIZE', (0, 1), (-1, -1), 9),
+            ('TOPPADDING', (0, 0), (-1, -1), 6),
+            ('BOTTOMPADDING', (0, 0), (-1, -1), 6),
+            ('LEFTPADDING', (0, 0), (-1, -1), 0),
+        ]))
+        story.append(hist_table)
+
+    doc.build(story)
     return response
 
 @login_required
 @role_required('DIR','DRH')
 def rapport_absences_form(request):
-    departements= Departement.objects.all()
-    return  render (request, 'conges/rapport_absences_form.html', {'departements': departements})
+    employe = request.user.employe
+    role = employe.get_role()
+ 
+    if role == 'DIR':
+        direction = Direction.objects.filter(directeur=employe).first()
+        departements = Departement.objects.filter(direction=direction) if direction else Departement.objects.none()
+    else:
+        departements = Departement.objects.all()
+ 
+    return render(request, 'conges/rapport_absences_form.html', {'departements': departements})
 
-@login_required
-@role_required('DIR','DRH')
+login_required
+@role_required('DIR', 'DRH')
 def rapport_absences_departement(request):
+    employe = request.user.employe
+    role = employe.get_role()
+ 
     departement_id = request.GET.get('departement')
     date_debut = request.GET.get('date_debut')
-    date_fin =  request.GET.get('date_fin')
-    
-    demandes = DemandeConge.objects.filter(statue='VA')
-    
+    date_fin = request.GET.get('date_fin')
+ 
+    direction = None
+    if role == 'DIR':
+        direction = Direction.objects.filter(directeur=employe).first()
+        if not direction:
+            messages.error(request, "Aucune direction associée à ce compte.")
+            return redirect('home')
+ 
+        if departement_id and not Departement.objects.filter(id=departement_id, direction=direction).exists():
+            messages.error(request, "Ce département ne fait pas partie de votre direction.")
+            return redirect('rapport_absences_form')
+ 
+        demandes = DemandeConge.objects.filter(statue='VA', name_employee__role__dep__direction=direction)
+    else:
+        demandes = DemandeConge.objects.filter(statue='VA')
+ 
     if departement_id:
         demandes = demandes.filter(name_employee__role__dep__id=departement_id)
     if date_debut:
         demandes = demandes.filter(dateFin__gte=date_debut)
     if date_fin:
         demandes = demandes.filter(dateDebut__lte=date_fin)
-        
+ 
     demandes = demandes.order_by('dateDebut')
-
+ 
     response = HttpResponse(content_type='application/pdf')
     response['Content-Disposition'] = 'attachment; filename="rapport_absences_departement.pdf"'
-
-    p = canvas.Canvas(response)
-    y = 800
-    p.drawString(100, y, "Rapport d'absences par département")
-    y -= 40
-
-    if not demandes:
-        p.drawString(100, y, "Aucune absence pour cette période/département.")
-        y -= 20
-    else:
-        for demande in demandes:
-            ligne = f"{demande.name_employee} - {demande.dateDebut} au {demande.dateFin}"
-            p.drawString(100, y, ligne)
-            y -= 20
-            if y < 50:
-                p.showPage()
-                y = 800
-
-    p.showPage()
-    p.save()
-    return response
  
+    doc = SimpleDocTemplate(
+        response, pagesize=A4,
+        topMargin=1.5 * cm, bottomMargin=1.5 * cm,
+        leftMargin=1.5 * cm, rightMargin=1.5 * cm,
+    )
+    styles = getSampleStyleSheet()
+    story = []
+ 
+    story.append(_header_table("Rapport d'absences par département"))
+    story.append(Spacer(1, 0.4 * cm))
+ 
+    grey_style = ParagraphStyle(
+        'Meta', parent=styles['Normal'], fontSize=10,
+        textColor=colors.black, leftIndent=6,
+    )
+    bold_black_style = ParagraphStyle(
+        'MetaBold', parent=styles['Normal'], fontSize=10,
+        textColor=colors.black, fontName='Helvetica-Bold', leftIndent=6,
+    )
+ 
+    if role == 'DIR' and direction:
+        story.append(Paragraph(f"Direction : {direction.nom_de_direction}", grey_style))
+        story.append(Spacer(1, 0.3 * cm))
+ 
+    if departement_id:
+        dep_obj = Departement.objects.filter(id=departement_id).first()
+        story.append(Paragraph(f"Département : {dep_obj.nom_de_departement if dep_obj else '—'}", bold_black_style))
+    else:
+        story.append(Paragraph("Département : Tous", bold_black_style))
+ 
+    date_parts = []
+    if date_debut:
+        date_parts.append(f"Du : {date_debut}")
+    if date_fin:
+        date_parts.append(f"Au : {date_fin}")
+    if date_parts:
+        story.append(Spacer(1, 0.1 * cm))
+        story.append(Paragraph(" &nbsp;|&nbsp; ".join(date_parts), grey_style))
+ 
+    story.append(Spacer(1, 0.6 * cm))
+ 
+    if not demandes:
+        story.append(Paragraph("Aucune absence pour cette période/département.", styles['Normal']))
+    else:
+        cell_style = ParagraphStyle('Cell', parent=styles['Normal'], fontSize=9, textColor=colors.black)
+
+        table_data = [["Employé", "Fonction", "Date début", "Date fin", "Jours"]]
+        for demande in demandes:
+            table_data.append([
+                Paragraph(demande.name_employee.nom, cell_style),
+                Paragraph(demande.name_employee.fonction, cell_style),
+                demande.dateDebut.strftime('%d/%m/%Y'),
+                demande.dateFin.strftime('%d/%m/%Y'),
+                str(demande.Numbrejours),
+            ])
+        table = Table(table_data, colWidths=[5 * cm, 4 * cm, 3 * cm, 3 * cm, 2 * cm], repeatRows=1)
+        table.setStyle(TableStyle([
+            ('BACKGROUND', (0, 0), (-1, 0), colors.HexColor("#F5821F")),
+            ('TEXTCOLOR', (0, 0), (-1, 0), colors.white),
+            ('FONTNAME', (0, 0), (-1, 0), 'Helvetica-Bold'),
+            ('FONTSIZE', (0, 0), (-1, 0), 9),
+            ('ALIGN', (2, 0), (-1, -1), 'CENTER'),
+            ('BACKGROUND', (0, 1), (-1, -1), colors.white),
+            ('GRID', (0, 0), (-1, -1), 0.5, colors.HexColor('#DDDDDD')),
+            ('FONTSIZE', (0, 1), (-1, -1), 9),
+            ('TOPPADDING', (0, 0), (-1, -1), 6),
+            ('BOTTOMPADDING', (0, 0), (-1, -1), 6),
+        ]))
+        story.append(table)
+ 
+    doc.build(story)
+    return response
+
 @login_required
 @role_required('DRH')
 def mission_liste(request):
@@ -751,10 +942,12 @@ def mission_corriger(request, mission_id):
         form = MissionCorrectionForm(instance=mission)
 
     return render(request, 'conges/mission_corriger.html', {'form': form, 'mission': mission})
+
 @login_required
 @role_required('CD')
 def chef_dashboard(request):
     chef = request.user.employe
+    solde = getattr(chef, 'solde', None)
     departement = Departement.objects.filter(Chef_de_departement=chef).first()
 
     if not departement:
@@ -792,6 +985,7 @@ def chef_dashboard(request):
         'demandes_en_attente': demandes_en_attente,
         'stats': stats,
         'tri': tri,
+        'solde': solde,
     })
     
 
@@ -799,6 +993,7 @@ def chef_dashboard(request):
 @role_required('DIR')
 def directeur_dashboard(request):
     directeur = request.user.employe
+    solde = getattr(directeur, 'solde', None)
     direction = Direction.objects.filter(directeur=directeur).first()
 
     if not direction:
@@ -838,6 +1033,7 @@ def directeur_dashboard(request):
         'direction': direction,
         'stats': stats,
         'demandes_en_attente': demandes_en_attente,
+        'solde': solde,
     })
     
 import json
@@ -845,6 +1041,7 @@ import json
 @login_required
 @role_required('DRH')
 def drh_dashboard(request):
+    solde = getattr(request.user.employe, 'solde', None)
     employes = Employe.objects.all()
     today = timezone.localdate()
 
@@ -920,6 +1117,7 @@ def drh_dashboard(request):
         'type_values': json.dumps(type_values),
         'mois_labels': json.dumps(mois_labels),
         'mois_values': json.dumps(mois_values),
+        'solde': solde,
         
     })
     
@@ -952,3 +1150,236 @@ def mes_notifications(request):
     notifications = Notification.objects.filter(employe=employe).order_by('-dateCreation', '-id')
     notifications.filter(lu=False).update(lu=True)
     return render(request, 'conges/mes_notifications.html', {'notifications': notifications})
+
+
+@login_required
+def demandes_validees(request):
+    employe = getattr(request.user, 'employe', None)
+    if not employe:
+        messages.error(request, "Aucun profil employé associé à ce compte.")
+        return redirect('home')
+
+    historique = Historique.objects.filter(employe=employe).order_by('-date_creation')
+    return render(request, 'conges/demandes_validees.html', {'historique': historique})
+@login_required
+@role_required('DRH')
+def gerer_direction(request):
+    direction_form = DirectionForm()
+
+    if request.method == 'POST':
+        direction_form = DirectionForm(request.POST)
+        if direction_form.is_valid():
+            direction_form.save()
+            messages.success(request, 'Direction créée avec succès')
+            return redirect('gerer_direction')
+
+    directions = Direction.objects.select_related('directeur').order_by('nom_de_direction')
+
+    return render(request, 'conges/gerer_direction.html', {
+        'direction_form': direction_form,
+        'directions': directions,
+    })
+
+
+@login_required
+@role_required('DRH')
+def gerer_departement(request):
+    departement_form = DepartementForm()
+
+    if request.method == 'POST':
+        departement_form = DepartementForm(request.POST)
+        if departement_form.is_valid():
+            departement_form.save()
+            messages.success(request, 'Département créé avec succès')
+            return redirect('gerer_departement')
+
+    departements = Departement.objects.select_related('direction', 'Chef_de_departement').order_by('nom_de_departement')
+
+    return render(request, 'conges/gerer_departement.html', {
+        'departement_form': departement_form,
+        'departements': departements,
+    })
+
+
+@login_required
+@role_required('DRH')
+def gerer_direction(request):
+    direction_form = DirectionForm()
+
+    if request.method == 'POST':
+        direction_form = DirectionForm(request.POST)
+        if direction_form.is_valid():
+            direction_form.save()
+            messages.success(request, 'Direction créée avec succès')
+            return redirect('gerer_direction')
+
+    directions = Direction.objects.select_related('directeur').order_by('nom_de_direction')
+
+    return render(request, 'conges/gerer_direction.html', {
+        'direction_form': direction_form,
+        'directions': directions,
+    })
+
+
+@login_required
+@role_required('DRH')
+def modifier_direction(request, pk):
+    direction = get_object_or_404(Direction, pk=pk)
+    if request.method == 'POST':
+        direction_form = DirectionForm(request.POST, instance=direction)
+        if direction_form.is_valid():
+            direction_form.save()
+            messages.success(request, 'Direction modifiée avec succès')
+            return redirect('gerer_direction')
+    else:
+        direction_form = DirectionForm(instance=direction)
+
+    return render(request, 'conges/modifier_direction.html', {
+        'direction_form': direction_form,
+        'direction': direction,
+    })
+
+
+@login_required
+@role_required('DRH')
+def supprimer_direction(request, pk):
+    direction = get_object_or_404(Direction, pk=pk)
+    if request.method == 'POST':
+        direction.delete()
+        messages.success(request, 'Direction supprimée avec succès')
+    return redirect('gerer_direction')
+
+
+@login_required
+@role_required('DRH')
+def gerer_departement(request):
+    departement_form = DepartementForm()
+
+    if request.method == 'POST':
+        departement_form = DepartementForm(request.POST)
+        if departement_form.is_valid():
+            departement_form.save()
+            messages.success(request, 'Département créé avec succès')
+            return redirect('gerer_departement')
+
+    departements = Departement.objects.select_related('direction', 'Chef_de_departement').order_by(
+        'direction__nom_de_direction', 'nom_de_departement'
+    )
+
+    return render(request, 'conges/gerer_departement.html', {
+        'departement_form': departement_form,
+        'departements': departements,
+    })
+
+
+@login_required
+@role_required('DRH')
+def modifier_departement(request, pk):
+    departement = get_object_or_404(Departement, pk=pk)
+    if request.method == 'POST':
+        departement_form = DepartementForm(request.POST, instance=departement)
+        if departement_form.is_valid():
+            departement_form.save()
+            messages.success(request, 'Département modifié avec succès')
+            return redirect('gerer_departement')
+    else:
+        departement_form = DepartementForm(instance=departement)
+
+    return render(request, 'conges/modifier_departement.html', {
+        'departement_form': departement_form,
+        'departement': departement,
+    })
+
+
+@login_required
+@role_required('DRH')
+def supprimer_departement(request, pk):
+    departement = get_object_or_404(Departement, pk=pk)
+    if request.method == 'POST':
+        departement.delete()
+        messages.success(request, 'Département supprimé avec succès')
+    return redirect('gerer_departement')
+
+
+@login_required
+@role_required('DRH')
+def gerer_groupe(request):
+    groupe_form = GroupeForm()
+
+    if request.method == 'POST':
+        groupe_form = GroupeForm(request.POST)
+        if groupe_form.is_valid():
+            groupe_form.save()
+            messages.success(request, 'Groupe créé avec succès')
+            return redirect('gerer_groupe')
+
+    groupes = Groupe.objects.select_related('depratement', 'depratement__direction', 'Chef_de_groupe')
+
+    direction_id = request.GET.get('direction')
+    departement_id = request.GET.get('departement')
+
+    if direction_id:
+        groupes = groupes.filter(depratement__direction_id=direction_id)
+    if departement_id:
+        groupes = groupes.filter(depratement_id=departement_id)
+
+    groupes = groupes.order_by(
+        'depratement__direction__nom_de_direction', 'depratement__nom_de_departement', 'nom_de_groupe'
+    )
+
+    directions = Direction.objects.order_by('nom_de_direction')
+    if direction_id:
+        departements = Departement.objects.filter(direction_id=direction_id).order_by('nom_de_departement')
+    else:
+        departements = Departement.objects.order_by('nom_de_departement')
+
+    return render(request, 'conges/gerer_groupe.html', {
+        'groupe_form': groupe_form,
+        'groupes': groupes,
+        'directions': directions,
+        'departements': departements,
+        'selected_direction': direction_id,
+        'selected_departement': departement_id,
+    })
+
+
+@login_required
+@role_required('DRH')
+def modifier_groupe(request, pk):
+    groupe = get_object_or_404(Groupe, pk=pk)
+    if request.method == 'POST':
+        groupe_form = GroupeForm(request.POST, instance=groupe)
+        if groupe_form.is_valid():
+            groupe_form.save()
+            messages.success(request, 'Groupe modifié avec succès')
+            return redirect('gerer_groupe')
+    else:
+        groupe_form = GroupeForm(instance=groupe)
+
+    return render(request, 'conges/modifier_groupe.html', {
+        'groupe_form': groupe_form,
+        'groupe': groupe,
+    })
+
+
+@login_required
+@role_required('DRH')
+def supprimer_groupe(request, pk):
+    groupe = get_object_or_404(Groupe, pk=pk)
+    if request.method == 'POST':
+        groupe.delete()
+        messages.success(request, 'Groupe supprimé avec succès')
+    return redirect('gerer_groupe')
+
+@login_required
+def notification_click(request, notification_id):
+    employe = getattr(request.user, 'employe', None)
+    notification = get_object_or_404(Notification, id=notification_id, employe=employe)
+
+    if not notification.lu:
+        notification.lu = True
+        notification.save()
+
+    if notification.type_notif == 'DMD':
+        return redirect('demandes_a_valider')
+    return redirect('mes_demandes')

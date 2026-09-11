@@ -3,12 +3,14 @@
     </div>
     <nav class="flex-1 px-3 py-4 space-y-1 text-sm">
 
-        <a href="{% url 'home' %}"
-           class="block px-4 py-2 rounded font-medium
-           {% if request.resolver_match.url_name == 'home' %}bg-primary-pale/40 text-primary
-           {% else %}text-neutral-400 hover:bg-neutral-50 hover:text-[#111111]{% endif %}">
-            Home
-        </a>
+        {% if user.employe.get_role == 'ES' or user.employe.get_role == 'CG' %}
+<a href="{% url 'home' %}"
+   class="block px-4 py-2 rounded font-medium
+   {% if request.resolver_match.url_name == 'home' %}bg-primary-pale/40 text-primary
+   {% else %}text-neutral-400 hover:bg-neutral-50 hover:text-[#111111]{% endif %}">
+    Home
+</a>
+{% endif %}
 
         {% if user.employe.get_role == 'CD' or user.employe.get_role == 'DIR' or user.employe.get_role == 'DRH' %}
         <a href="{% url 'dashboard' %}"
@@ -20,34 +22,31 @@
         {% endif %}
 
         <a href="{% url 'mes_demandes' %}"
-           class="block px-4 py-2 rounded
+           class="flex items-center justify-between px-4 py-2 rounded
            {% if request.resolver_match.url_name == 'mes_demandes' %}bg-primary-pale/40 text-primary font-medium
            {% else %}text-neutral-400 hover:bg-neutral-50 hover:text-[#111111]{% endif %}">
-            Mes demandes
+            <span>Mes demandes</span>
+            {% if mes_demandes_count > 0 %}
+            <span class="flex items-center justify-center text-xs font-medium bg-primary text-white rounded-full w-5 h-5">{{ mes_demandes_count }}</span>
+            {% endif %}
         </a>
 
-        <a href="{% url 'mon_solde' %}"
+        <a href="{% url 'demandes_validees' %}"
            class="block px-4 py-2 rounded
-           {% if request.resolver_match.url_name == 'mon_solde' %}bg-primary-pale/40 text-primary font-medium
+           {% if request.resolver_match.url_name == 'demandes_validees' %}bg-primary-pale/40 text-primary font-medium
            {% else %}text-neutral-400 hover:bg-neutral-50 hover:text-[#111111]{% endif %}">
-            Solde
+            Demandes validées
         </a>
 
-        <a href="{% url 'mes_notifications' %}"
-           class="block px-4 py-2 rounded
-           {% if request.resolver_match.url_name == 'mes_notifications' %}bg-primary-pale/40 text-primary font-medium
-           {% else %}text-neutral-400 hover:bg-neutral-50 hover:text-[#111111]{% endif %}">
-            Notifications
-        </a>
-
-        {% if user.employe.get_role == 'CG' or user.employe.get_role == 'CD' or user.employe.get_role == 'DIR' %}
-        <a href="{% url 'demandes_a_valider' %}"
-           class="block px-4 py-2 rounded
+                 <a href="{% url 'demandes_a_valider' %}"
+           class="flex items-center justify-between px-4 py-2 rounded
            {% if request.resolver_match.url_name == 'demandes_a_valider' %}bg-primary-pale/40 text-primary font-medium
            {% else %}text-neutral-400 hover:bg-neutral-50 hover:text-[#111111]{% endif %}">
-            Demandes à valider
+            <span>Demandes à valider</span>
+            {% if a_valider_count > 0 %}
+            <span class="flex items-center justify-center text-xs font-medium bg-primary text-white rounded-full w-5 h-5">{{ a_valider_count }}</span>
+            {% endif %}
         </a>
-        {% endif %}
 
         {% if user.employe.get_role == 'DRH' %}
         <div class="pt-4 mt-4 border-t border-neutral-100 space-y-1">
@@ -57,6 +56,27 @@
                {% else %}text-neutral-400 hover:bg-neutral-50 hover:text-[#111111]{% endif %}">
                 Gérer les employés
             </a>
+            <a href="{% url 'gerer_direction' %}"
+               class="block px-3 py-2 rounded
+               {% if request.resolver_match.url_name == 'gerer_direction' %}bg-primary-pale/40 text-primary font-medium
+               {% else %}text-neutral-400 hover:bg-neutral-50 hover:text-[#111111]{% endif %}">
+                Gérer directions
+            </a>
+
+            <a href="{% url 'gerer_departement' %}"
+               class="block px-3 py-2 rounded
+               {% if request.resolver_match.url_name == 'gerer_departement' %}bg-primary-pale/40 text-primary font-medium
+               {% else %}text-neutral-400 hover:bg-neutral-50 hover:text-[#111111]{% endif %}">
+                Gérer départements
+            </a>
+
+            <a href="{% url 'gerer_groupe' %}"
+               class="block px-3 py-2 rounded
+               {% if request.resolver_match.url_name == 'gerer_groupe' %}bg-primary-pale/40 text-primary font-medium
+               {% else %}text-neutral-400 hover:bg-neutral-50 hover:text-[#111111]{% endif %}">
+                Gérer groupes
+            </a>
+
             <a href="{% url 'recherche_demandes' %}"
                class="block px-3 py-2 rounded
                {% if request.resolver_match.url_name == 'recherche_demandes' %}bg-primary-pale/40 text-primary font-medium

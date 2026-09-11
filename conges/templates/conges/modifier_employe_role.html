@@ -25,16 +25,24 @@
         {% endif %}
 
         <div class="bg-white border border-neutral-200 rounded p-6 max-w-xl">
-            <div class="mb-5 pb-5 border-b border-neutral-100">
-                <p class="text-sm text-neutral-400">Fonction</p>
-                <p class="font-medium">{{ employe.fonction }}</p>
-                {% if existing_role %}
-                <p class="text-xs text-neutral-400 mt-2">Rôle actuel : {{ existing_role.role.get_name_display }}</p>
-                {% endif %}
-            </div>
-
             <form method="post" class="space-y-5">
                 {% csrf_token %}
+
+                <div>
+                    <label class="block text-sm font-medium mb-1.5">Nom</label>
+                    <input type="text" name="nom" value="{{ employe.nom }}"
+                           class="w-full border border-neutral-200 rounded px-3 py-2.5 text-sm focus:outline-none focus:border-primary focus:ring-1 focus:ring-primary">
+                </div>
+
+                <div>
+                    <label class="block text-sm font-medium mb-1.5">Fonction</label>
+                    <input type="text" name="fonction" value="{{ employe.fonction }}"
+                           class="w-full border border-neutral-200 rounded px-3 py-2.5 text-sm focus:outline-none focus:border-primary focus:ring-1 focus:ring-primary">
+                </div>
+
+                {% if existing_role %}
+                <p class="text-xs text-neutral-400">Rôle actuel : {{ existing_role.role.get_name_display }}</p>
+                {% endif %}
 
                 <div>
                     <label class="block text-sm font-medium mb-1.5">Rôle</label>

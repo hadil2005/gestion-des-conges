@@ -1,0 +1,42 @@
+{% extends 'conges/base.html' %}
+{% block title %}Modifier une direction{% endblock %}
+
+{% block content %}
+<div class="flex min-h-screen">
+
+    {% include 'conges/_sidebar.html' %}
+
+    <main class="flex-1 px-8 py-8">
+
+        <div class="flex items-start justify-between mb-8">
+            <h1 class="text-2xl font-semibold">Modifier la direction « {{ direction.nom_de_direction }} »</h1>
+            <div class="flex items-center gap-3">
+                {% include 'conges/_notif_bell.html' %}
+                {% include 'conges/_employe_info.html' %}
+            </div>
+        </div>
+
+        <div class="bg-white border border-neutral-200 rounded p-6 max-w-xl">
+            <form method="post" class="space-y-5">
+                {% csrf_token %}
+                <div>
+                    <label class="block text-sm font-medium mb-1.5">Nom de la direction</label>
+                    {{ direction_form.nom_de_direction }}
+                </div>
+                <div>
+                    <label class="block text-sm font-medium mb-1.5">Directeur (optionnel)</label>
+                    {{ direction_form.directeur }}
+                </div>
+                <div class="flex items-center gap-3">
+                    <button type="submit"
+                            class="bg-primary hover:bg-primary-light text-white font-medium rounded px-5 py-2.5 text-sm transition-colors">
+                        Enregistrer
+                    </button>
+                    <a href="{% url 'gerer_direction' %}" class="text-sm text-neutral-500 hover:underline">Annuler</a>
+                </div>
+            </form>
+        </div>
+
+    </main>
+</div>
+{% endblock %}

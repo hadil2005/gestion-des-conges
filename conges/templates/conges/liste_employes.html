@@ -34,45 +34,101 @@
             </a>
         </div>
  
-       <form method="get" class="mb-6 flex flex-wrap items-end gap-4">
-    <div>
-        <label class="block text-sm font-medium mb-1.5">Nom</label>
-        <input type="text" name="nom" value="{{ nom }}" placeholder="Rechercher par nom..."
-               class="w-full border border-neutral-200 rounded px-3 py-2.5 text-sm focus:outline-none focus:border-primary focus:ring-1 focus:ring-primary">
-    </div>
+        <form method="get" class="mb-6 flex flex-wrap items-end gap-4">
+            <div>
+                <label class="block text-sm font-medium mb-1.5">Nom</label>
+                <input type="text" name="nom" value="{{ nom }}" placeholder="Rechercher par nom..."
+                       class="w-full border border-neutral-200 rounded px-3 py-2.5 text-sm focus:outline-none focus:border-primary focus:ring-1 focus:ring-primary">
+            </div>
 
-    <div>
-        <label class="block text-sm font-medium mb-1.5">Direction</label>
-        <select name="direction" id="filter-direction"
-                class="w-full border border-neutral-200 rounded px-3 py-2.5 text-sm focus:outline-none focus:border-primary focus:ring-1 focus:ring-primary">
-            <option value="">Toutes</option>
-            {% for d in directions %}
-            <option value="{{ d.id }}" {% if direction_id == d.id|stringformat:"s" %}selected{% endif %}>{{ d.nom_de_direction }}</option>
-            {% endfor %}
-        </select>
-    </div>
+            <div>
+                <label class="block text-sm font-medium mb-1.5">Direction</label>
+                <select name="direction" id="filter-direction"
+                        class="w-full border border-neutral-200 rounded px-3 py-2.5 text-sm focus:outline-none focus:border-primary focus:ring-1 focus:ring-primary">
+                    <option value="">Toutes</option>
+                    {% for d in directions %}
+                    <option value="{{ d.id }}" {% if direction_id == d.id|stringformat:"s" %}selected{% endif %}>{{ d.nom_de_direction }}</option>
+                    {% endfor %}
+                </select>
+            </div>
 
-    <div>
-        <label class="block text-sm font-medium mb-1.5">Département</label>
-        <select name="departement" id="filter-departement"
-                class="w-full border border-neutral-200 rounded px-3 py-2.5 text-sm focus:outline-none focus:border-primary focus:ring-1 focus:ring-primary">
-            <option value="">Tous</option>
-            {% for dep in departements %}
-            <option value="{{ dep.id }}" data-direction="{{ dep.direction_id }}"
-                    {% if departement_id == dep.id|stringformat:"s" %}selected{% endif %}>{{ dep.nom_de_departement }}</option>
-            {% endfor %}
-        </select>
-    </div>
+            <div>
+                <label class="block text-sm font-medium mb-1.5">Département</label>
+                <select name="departement" id="filter-departement"
+                        class="w-full border border-neutral-200 rounded px-3 py-2.5 text-sm focus:outline-none focus:border-primary focus:ring-1 focus:ring-primary">
+                    <option value="">Tous</option>
+                    {% for dep in departements %}
+                    <option value="{{ dep.id }}" data-direction="{{ dep.direction_id }}"
+                            {% if departement_id == dep.id|stringformat:"s" %}selected{% endif %}>{{ dep.nom_de_departement }}</option>
+                    {% endfor %}
+                </select>
+            </div>
 
-    <button type="submit"
-            class="bg-primary hover:bg-primary-light text-white font-medium rounded px-5 py-2.5 text-sm transition-colors">
-        Filtrer
-    </button>
-    <a href="{% url 'liste_employes' %}"
-       class="border border-neutral-200 hover:bg-neutral-50 text-[#111111] font-medium rounded px-5 py-2.5 text-sm transition-colors">
-        Réinitialiser
-    </a>
-</form>
+            <button type="submit"
+                    class="bg-primary hover:bg-primary-light text-white font-medium rounded px-5 py-2.5 text-sm transition-colors">
+                Filtrer
+            </button>
+            <a href="{% url 'liste_employes' %}"
+               class="border border-neutral-200 hover:bg-neutral-50 text-[#111111] font-medium rounded px-5 py-2.5 text-sm transition-colors">
+                Réinitialiser
+            </a>
+        </form>
+ 
+        {% if employes %}
+        <div class="bg-white border border-neutral-200 rounded overflow-hidden">
+            <table class="w-full text-sm">
+                <thead>
+                    <tr class="text-left text-neutral-400 border-b border-neutral-100">
+                        <th class="px-6 py-3 font-medium">Nom</th>
+                        <th class="px-6 py-3 font-medium">Fonction</th>
+                        <th class="px-6 py-3 font-medium">Rôle</th>
+                        <th class="px-6 py-3 font-medium">Groupe / Département / Direction</th>
+                        <th class="px-6 py-3 font-medium">Jours consommés</th>
+                        <th class="px-6 py-3 font-medium text-right">Actions</th>
+                    </tr>
+                </thead>
+                <tbody class="divide-y divide-neutral-100">
+                    {% for e in employes %}
+                    <tr class="hover:bg-neutral-50">
+                        <td class="px-6 py-3">{{ e.nom }}</td>
+                        <td class="px-6 py-3">{{ e.fonction }}</td>
+                        <td class="px-6 py-3">
+                            {% with role=e.role.first %}
+                            {% if role %}
+                            <span class="text-xs font-medium px-2 py-0.5 rounded bg-neutral-100 text-neutral-400">{{ role.role.get_name_display }}</span>
+                            {% else %}
+                            <span class="text-xs text-neutral-400">—</span>
+                            {% endif %}
+                            {% endwith %}
+                        </td>
+                        <td class="px-6 py-3 text-neutral-400">
+                            {% with role=e.role.first %}
+                            {% if role.groupe %}{{ role.groupe.nom_de_groupe }}
+                            {% elif role.dep %}{{ role.dep.nom_de_departement }}
+                            {% elif role.direction %}{{ role.direction.nom_de_direction }}
+                            {% else %}—{% endif %}
+                            {% endwith %}
+                        </td>
+                        <td class="px-6 py-3 text-neutral-400">
+                            {% if e.solde %}{{ e.solde.jours_consommes|floatformat:0 }}{% else %}0{% endif %}
+                        </td>
+                        <td class="px-6 py-3 text-right space-x-3">
+                            <a href="{% url 'modifier_employe_role' e.id %}" class="text-primary hover:text-primary-light font-medium">Modifier</a>
+                            <a href="{% url 'supprimer_employe' e.id %}" class="text-danger hover:text-danger-light font-medium">Supprimer</a>
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+        {% else %}
+        <div class="bg-white border border-neutral-200 rounded px-6 py-12 text-center">
+            <p class="text-neutral-400 text-sm">Aucun employé.</p>
+        </div>
+        {% endif %}
+ 
+    </main>
+</div>
 
 <script>
 document.addEventListener('DOMContentLoaded', function() {
@@ -104,56 +160,4 @@ document.addEventListener('DOMContentLoaded', function() {
     filterDepartements();
 });
 </script>
- 
-        {% if employes %}
-        <div class="bg-white border border-neutral-200 rounded overflow-hidden">
-            <table class="w-full text-sm">
-                <thead>
-                    <tr class="text-left text-neutral-400 border-b border-neutral-100">
-                        <th class="px-6 py-3 font-medium">Nom</th>
-                        <th class="px-6 py-3 font-medium">Fonction</th>
-                        <th class="px-6 py-3 font-medium">Rôle</th>
-                        <th class="px-6 py-3 font-medium">Groupe / Département / Direction</th>
-                        <th class="px-6 py-3 font-medium text-right">Actions</th>
-                    </tr>
-                </thead>
-                <tbody class="divide-y divide-neutral-100">
-                    {% for e in employes %}
-                    <tr class="hover:bg-neutral-50">
-                        <td class="px-6 py-3">{{ e.nom }}</td>
-                        <td class="px-6 py-3">{{ e.fonction }}</td>
-                        <td class="px-6 py-3">
-                            {% with role=e.role.first %}
-                            {% if role %}
-                            <span class="text-xs font-medium px-2 py-0.5 rounded bg-neutral-100 text-neutral-400">{{ role.role.get_name_display }}</span>
-                            {% else %}
-                            <span class="text-xs text-neutral-400">—</span>
-                            {% endif %}
-                            {% endwith %}
-                        </td>
-                        <td class="px-6 py-3 text-neutral-400">
-                            {% with role=e.role.first %}
-                            {% if role.groupe %}{{ role.groupe.nom_de_groupe }}
-                            {% elif role.dep %}{{ role.dep.nom_de_departement }}
-                            {% elif role.direction %}{{ role.direction.nom_de_direction }}
-                            {% else %}—{% endif %}
-                            {% endwith %}
-                        </td>
-                        <td class="px-6 py-3 text-right space-x-3">
-                            <a href="{% url 'modifier_employe_role' e.id %}" class="text-primary hover:text-primary-light font-medium">Modifier</a>
-                            <a href="{% url 'supprimer_employe' e.id %}" class="text-danger hover:text-danger-light font-medium">Supprimer</a>
-                        </td>
-                    </tr>
-                    {% endfor %}
-                </tbody>
-            </table>
-        </div>
-        {% else %}
-        <div class="bg-white border border-neutral-200 rounded px-6 py-12 text-center">
-            <p class="text-neutral-400 text-sm">Aucun employé.</p>
-        </div>
-        {% endif %}
- 
-    </main>
-</div>
 {% endblock %}

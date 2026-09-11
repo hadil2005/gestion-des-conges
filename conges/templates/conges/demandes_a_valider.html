@@ -10,7 +10,77 @@
 
         <h1 class="text-2xl font-semibold mb-8">Demandes à valider</h1>
 
+        {% if remplacements_en_attente %}
+        <h2 class="py-2 font-medium">Demandes de remplacement en attente</h2>
+        <div class="bg-white border border-neutral-200 rounded overflow-hidden mb-8">
+            <table class="w-full text-sm">
+                <thead>
+                    <tr class="text-left text-neutral-400 border-b border-neutral-100">
+                        <th class="px-6 py-3 font-medium">Employé</th>
+                        <th class="px-6 py-3 font-medium">Type</th>
+                        <th class="px-6 py-3 font-medium">Période</th>
+                        <th class="px-6 py-3 font-medium">Durée</th>
+                        <th class="px-6 py-3 font-medium text-right">Action</th>
+                    </tr>
+                </thead>
+                <tbody class="divide-y divide-neutral-100">
+                    {% for d in remplacements_en_attente %}
+                    <tr>
+                        <td class="px-6 py-3">{{ d.name_employee.nom }}</td>
+                        <td class="px-6 py-3">{{ d.get_type_conge_display }}</td>
+                        <td class="px-6 py-3">{{ d.dateDebut }} → {{ d.dateFin }}</td>
+                        <td class="px-6 py-3">{{ d.Numbrejours }} jours</td>
+                        <td class="px-6 py-3 text-right">
+                            <button onclick="document.getElementById('modal-remplacement-{{ d.id }}').classList.remove('hidden')"
+                                    class="text-primary hover:text-primary-light font-medium">
+                                Répondre
+                            </button>
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+        {% for d in remplacements_en_attente %}
+        <div id="modal-remplacement-{{ d.id }}" class="hidden fixed inset-0 bg-black/40 flex items-center justify-center z-50 p-4">
+            <div class="bg-white rounded w-full max-w-md">
+                <div class="flex items-center justify-between px-6 py-4 border-b border-neutral-100">
+                    <h2 class="text-lg font-semibold">Répondre à la demande</h2>
+                    <button onclick="document.getElementById('modal-remplacement-{{ d.id }}').classList.add('hidden')"
+                            class="text-neutral-400 hover:text-[#111111] text-xl leading-none">✕</button>
+                </div>
+                <div class="px-6 py-6">
+                    <p class="text-sm mb-1"><span class="font-medium">{{ d.name_employee.nom }}</span> vous propose comme remplaçant</p>
+                    <p class="text-sm text-neutral-400 mb-4">Du {{ d.dateDebut }} au {{ d.dateFin }} ({{ d.Numbrejours }} jours)</p>
+                    {% if d.motif %}
+                    <p class="text-sm text-neutral-400 mb-6">Motif : {{ d.motif }}</p>
+                    {% endif %}
+                    <form method="post" action="{% url 'accepter_remplacent' d.id %}" class="space-y-4">
+                        {% csrf_token %}
+                        <div>
+                            <label class="block text-sm font-medium mb-1.5">Commentaire (optionnel)</label>
+                            <textarea name="commentaire" rows="3"
+                                class="w-full border border-neutral-200 rounded px-3 py-2.5 text-sm focus:outline-none focus:border-primary focus:ring-1 focus:ring-primary"></textarea>
+                        </div>
+                        <div class="flex items-center gap-3">
+                            <button type="submit" name="action" value="accepter"
+                                    class="bg-primary hover:bg-primary-light text-white font-medium rounded px-5 py-2.5 text-sm transition-colors">
+                                Accepter
+                            </button>
+                            <button type="submit" name="action" value="refuser"
+                                    class="border border-neutral-200 hover:bg-neutral-50 text-[#111111] font-medium rounded px-5 py-2.5 text-sm transition-colors">
+                                Refuser
+                            </button>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>
+        {% endfor %}
+        {% endif %}
+
         {% if demandes %}
+        <h2 class="py-2 font-medium">Demandes en attente de validation</h2>
         <div class="bg-white border border-neutral-200 rounded overflow-hidden">
             <table class="w-full text-sm">
                 <thead>
@@ -82,7 +152,9 @@
         </div>
         {% endfor %}
 
-        {% else %}
+        {% endif %}
+
+        {% if not demandes and not remplacements_en_attente %}
         <div class="bg-white border border-neutral-200 rounded px-6 py-12 text-center">
             <p class="text-neutral-400 text-sm">Aucune demande en attente.</p>
         </div>
