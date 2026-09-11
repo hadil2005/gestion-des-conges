@@ -13,8 +13,9 @@ class Role(models.Model):
         name=models.CharField(max_length=20,choices=ROLE_CHOICES, unique =True)
         def __str__(self):
           return self.get_name_display()
-     
+
 class Employe(models.Model):
+
     
     nom=models.CharField(max_length=40)
     fonction=models.CharField(max_length=40)
@@ -78,6 +79,7 @@ class Employe(models.Model):
     
     def __str__(self):
         return f"{self.nom}, {self.fonction}"
+    
     
 class Direction(models.Model):
       nom_de_direction = models.CharField(max_length=30)
@@ -164,6 +166,48 @@ class EmployeRole(models.Model):
     def __str__(self):
         return f"{self.employe} - {self.role}"
     
+class DemandeConge(models.Model):
+        name_employee=models.ForeignKey(
+          Employe,
+          on_delete=models.CASCADE,
+          related_name='employe' 
+        )
+        name_remplacent=models.ForeignKey(
+            Employe,
+            on_delete=models.CASCADE,
+            related_name='remplacent'
+        )
+        dateCreation = models.DateField(auto_now_add=True)
+        dateDebut = models.DateField()
+        dateFin = models.DateField()
+        Numbrejours= models.DecimalField(max_digits=2, decimal_places=0)
+        piece_Joine=models.FileField(upload_to='justificatifs/', null=True, blank=True)
+        commentaire=models.TextField(blank=True)
+        TYPE_STATUE = [
+            ('VA', 'Validé'),
+            ('REF', 'Refusé'),
+            ('EN_ATT_RMP', 'En attente remplacent'),
+            ('EN_ATT_VA', 'En attente validation'),
+            ('BR', 'Brouillon'),
+            ('ANN', 'Annulé')   
+        ]
+        statue=models.CharField(max_length=10, choices=TYPE_STATUE)
+        NIVEAU_CHOICES = [ 
+           ('CG', 'Chef de Groupe'),
+           ('CD', 'Chef de Département'),
+           ('DIR', 'Directeur')       
+                          ]
+        niveau_validation=models.CharField(max_length=20, choices= NIVEAU_CHOICES, blank=True, null=True)
+        motif = models.CharField(max_length=255, blank=True)
+        TYPE_CONGE_CHOICES = [
+         ('1', 'Congé xxx'),
+         ('2', 'Congé maladie'),
+         ('3', 'Congé xx'),
+         ('AU', 'Autre'),
+]
+        type_conge = models.CharField(max_length=10, choices=TYPE_CONGE_CHOICES)
+        def __str__(self):
+         return f"Demande de {self.name_employee} ({self.get_statue_display()})"
     
 class Solde(models.Model):
         employe=models.OneToOneField(
