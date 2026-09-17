@@ -1,8 +1,6 @@
 from .models import Notification, DemandeConge
 
 
-from .models import Notification, DemandeConge
-
 
 def notifications_context(request):
     if not request.user.is_authenticated:
